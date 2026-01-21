@@ -28,23 +28,14 @@
   .flexrow{display:flex;gap:12px;align-items:center}
   .flexcol{display:flex;flex-direction:column;gap:12px}
   .currency{display:flex;gap:12px;align-items:center}
-  .currency-row {
-    display: flex;
-    justify-content: space-evenly;
-    align-items: center;
-    width: 100%;
-  }
-  .currency-row > div {
-    text-align: center;
-    min-width: 70px;
-  }
+  .currency-row {display: flex;justify-content: space-evenly;align-items: center;width: 100%;}
+  .currency-row > div {text-align: center;min-width: 70px;}
   .chip{background:var(--glass);padding:8px 10px;border-radius:10px;font-size:14px;color:var(--muted);min-width:120px;text-align:center}
   .big-num{font-weight:700;color:#fff;font-size:18px}
   .sub{font-size:12px;color:var(--muted)}
   main{display:grid;grid-template-columns: 1fr 420px; gap:12px;}
   .left{display:flex;flex-direction:column;gap:12px}
   .right{display:flex;flex-direction:column;gap:12px}
-
   /* ===== Inventory area layout (3x3 grid) ===== */
   /* Grid positions:
      1 2 3
@@ -56,129 +47,36 @@
      - Merge: 7,8,9 (bottom row, full width)
   */
   .inventory-panel { padding: 12px; }
-  .inventory-layout {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto auto auto;
-    gap: 12px;
-    align-items: start;
-  }
-
+  .inventory-layout {display: grid;grid-template-columns: repeat(2, 1fr);grid-template-rows: auto auto auto;gap: 12px;align-items: start;}
   /* Inventory occupies positions 1,2,4,5 (2x2 top-left) */
-  #inventoryGrid { 
-    grid-column: 1 / 3; 
-    grid-row: 1 / 3; 
-  }
-
+  #inventoryGrid { grid-column: 1 / 3; grid-row: 1 / 3; }
   /* Equipment occupies position 3 (top-right) */
-  #equipmentColumn { 
-    grid-column: 3 / 4; 
-    grid-row: 1 / 2; 
-  }
+  #equipmentColumn { grid-column: 3 / 4; grid-row: 1 / 2; }
   #equipmentColumn .panel { padding:10px; }
-
   /* Make equipmentArea a 3x2 grid (3 columns × 2 rows) */
-  #equipmentArea {
-    display: grid;
-    grid-template-columns: repeat(3, 64px);
-    grid-template-rows: repeat(2, 64px);
-    gap: 8px;
-    justify-content: start;
-    align-content: start;
-    padding: 8px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
-    border-radius: 8px;
-  }
-  #equipmentArea .equip-slot {
-    width: 64px;
-    height: 64px;
-    padding: 4px;
-    display:flex;align-items:center;justify-content:center;
-  }
-
+  #equipmentArea {display: grid;grid-template-columns: repeat(3, 64px);grid-template-rows: repeat(2, 64px);gap: 8px;justify-content: start;align-content: start;padding: 8px;background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border-radius: 8px;}
+  #equipmentArea .equip-slot {width: 64px;height: 64px;padding: 4px;display:flex;align-items:center;justify-content:center;}
   /* Buffs occupy position 6 (middle-right) */
-  #buffColumn { 
-    grid-column: 3 / 4; 
-    grid-row: 2 / 3; 
-  }
+  #buffColumn { grid-column: 3 / 4; grid-row: 2 / 3; }
   #buffArea { display:flex;flex-direction:column; gap:8px; padding:8px; }
   /* Adjust buff-slot to fit the column width */
-  .buff-slot {
-    width: 100%;
-    height: 64px;
-    min-height: 64px;
-    box-sizing: border-box;
-    border-radius:8px;
-    background: rgba(255,255,255,0.02);
-    display:flex;align-items:center;justify-content:center;
-    border:1px solid rgba(255,255,255,0.02);
-  }
-
+  .buff-slot {width: 100%;height: 64px;min-height: 64px;box-sizing: border-box;border-radius:8px;background: rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.02);}
   /* Merge occupies positions 7,8,9 (bottom row, full width) */
-  #mergeColumn { 
-    grid-column: 1 / 4; 
-    grid-row: 3 / 4; 
-  }
+  #mergeColumn { grid-column: 1 / 4; grid-row: 3 / 4; }
   /* Tags */
-  /* ===== Animated rarity tags (Epic+) ===== */
-.rarity-tag {
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:3px 9px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:.05em;
-  background:rgba(255,255,255,0.04);
-  border:1px solid currentColor;
-  position:relative;
-  overflow:hidden;
-}
-
+.rarity-tag {display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:rgba(255,255,255,0.04);border:1px solid currentColor;position:relative;overflow:hidden;}
 /* glow sweep */
-.rarity-tag::after {
-  content:'';
-  position:absolute;
-  inset:-40%;
-  background:linear-gradient(
-    120deg,
-    transparent 30%,
-    rgba(255,255,255,0.35),
-    transparent 70%
-  );
-  transform:translateX(-100%);
-  opacity:0;
-}
-
-/* Epic+ animation */
-.rarity-epic,
-.rarity-legendary,
-.rarity-mythic {
-  animation: tagPulse 2.8s ease-in-out infinite;
-}
-
-.rarity-epic::after,
-.rarity-legendary::after,
-.rarity-mythic::after {
-  animation: tagSweep 3.5s linear infinite;
-  opacity:0.35;
-}
-
+.rarity-tag::after {content:'';position:absolute;inset:-40%;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.35),transparent 70%);transform:translateX(-100%);opacity:0;}
+/* ===== Animated rarity tags (Epic+) ===== */
+.rarity-epic, .rarity-legendary, .rarity-mythic {animation: tagPulse 2.8s ease-in-out infinite;}
+.rarity-epic::after, .rarity-legendary::after, .rarity-mythic::after {animation: tagSweep 3.5s linear infinite;opacity:0.35;}
 /* Stronger effects per tier */
-.rarity-legendary, .rarity-mythic {
-  box-shadow: 0 0 8px currentColor;
-}
-
+.rarity-legendary, .rarity-mythic {box-shadow: 0 0 8px currentColor;}
 /* Animations */
-
 @keyframes tagSweep {
   0%   { transform:translateX(-120%); }
   100% { transform:translateX(120%); }
 }
-
-
   /* ===== Inventory grid ===== */
   .grid {display:grid;grid-template-columns: repeat(6,64px);grid-template-rows: repeat(6,64px);gap:8px;padding:8px;background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.00));border-radius:8px;position:relative}
   .slot {width:64px;height:64px;border-radius:8px;background:rgba(255,255,255,0.01);display:flex;align-items:center;justify-content:center;position:relative;transition:box-shadow .12s,transform .12s}
@@ -200,6 +98,22 @@
   .merge-panel{display:flex;gap:8px;align-items:center;justify-content: space-between;}
   .merge-slot{width:72px;height:72px;border-radius:8px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;border:1px dashed rgba(255,255,255,0.03)}
   .merge-go{background:linear-gradient(90deg,#ff6b6b,#ff8b6b);padding:8px 10px;border-radius:8px;font-weight:700;cursor:pointer}
+
+
+  /* ===== Merge UI adjustments (assistant) ===== */
+  .merge-panel { overflow: visible; }
+  .merge-slots { display:flex; gap:8px; align-items:center; }
+  .merge-slot { width:72px; height:72px; min-width:72px; min-height:72px; border-radius:8px; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; border:1px dashed rgba(255,255,255,0.03); flex: 0 0 auto; }
+  .merge-previews { display:flex; gap:8px; align-items:center; }
+  .merge-previews .panel { min-width:140px; min-height:82px; display:flex; flex-direction:column; align-items:center; justify-content:center; flex: 0 0 auto; }
+  .merge-previews .item-card { width:120px; height:52px; cursor:default; pointer-events:none; }
+  .merge-arrow { flex: 0 0 auto; margin: 0 6px; }
+  @media (max-width:980px){
+    .merge-panel { flex-wrap:wrap; gap:10px; }
+    .merge-controls { margin-left:0; width:100%; }
+    .merge-previews, .merge-slots { justify-content:flex-start; width:100%; overflow:auto; }
+  }
+
   /* tooltip */
   .tooltip{
     position:fixed;z-index:var(--tooltip-z);min-width:220px;max-width:360px;padding:10px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6);transform-origin:top left;
@@ -438,24 +352,31 @@
                   <button class="btn" id="btnClearMerge">Clear</button>
                 </div>
               </div>
-              <div class="merge-panel" style="margin-top:8px">
-                <div style="display:flex;gap:8px">
-                  <div class="merge-slot panel" data-merge-slot="0"></div>
-                  <div class="merge-slot panel" data-merge-slot="1"></div>
-                  <div class="merge-slot panel" data-merge-slot="2"></div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
-                  <div class="panel" style="min-width:200px">
-                    <div><strong>Merge Odds</strong></div>
-                    <div style="font-size:13px;color:var(--muted)" id="mergeOdds">60% → avg / 30% → lower / 10% → higher</div>
-                    <div style="font-size:12px;margin-top:6px" id="mergeCost">Enhance cost: —</div>
-                  </div>
-                  <div style="display:flex;flex-direction:column;gap:6px">
-                    <button id="btnEnhance" class="btn primary">Enhance</button>
-                    <button id="btnMerge" class="merge-go">Merge</button>
-                  </div>
-                </div>
-              </div>
+              <div class="merge-panel" style="margin-top:8px; display:flex; gap:12px; align-items:center; flex-wrap:nowrap; overflow:auto;">
+  <div class="merge-slots" style="display:flex; gap:8px; align-items:center; flex: 0 0 auto;">
+    <div class="merge-slot panel" data-merge-slot="0"></div>
+    <div class="merge-slot panel" data-merge-slot="1"></div>
+    <div class="merge-slot panel" data-merge-slot="2"></div>
+  </div>
+
+  <div class="merge-arrow" aria-hidden="true" style="font-size:28px; padding:0 6px; flex: 0 0 auto;">➡️</div>
+
+  <div id="mergePreviewWrap" class="merge-previews" style="display:flex; gap:8px; align-items:center; flex: 0 0 auto;">
+    <!-- previews will be populated by renderMergePanel() -->
+  </div>
+
+  <div class="merge-controls" style="display:flex;flex-direction:column;gap:6px;margin-left:auto;min-width:220px;flex: 0 0 auto;">
+    <div class="panel">
+      <div><strong>Merge Odds</strong></div>
+      <div style="font-size:13px;color:var(--muted)" id="mergeOdds">60% → avg / 30% → lower / 10% → higher</div>
+      <div style="font-size:12px;margin-top:6px" id="mergeCost">Enhance cost: —</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button id="btnEnhance" class="btn primary">Enhance</button>
+      <button id="btnMerge" class="merge-go">Merge</button>
+    </div>
+  </div>
+</div>
             </div>
           </div>
 
@@ -477,7 +398,7 @@
     <aside class="right">
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <div><strong>Shop</strong><div class="sub">Auto refresh every 60s</div></div>
+          <div><strong>Shop</strong><div class="sub" id="shopRefreshLabel">Refreshes in 60s</div></div>
           <div style="display:flex;gap:8px;align-items:center">
             <div class="sub">Refresh: 10 gems</div>
             <button class="btn" id="btnRefreshShop">Refresh</button>
@@ -602,8 +523,22 @@ function formatCompact(n) {
   if (n >= 1e9) return (n/1e9).toFixed(2).replace(/\.00$/,'')+'B';
   if (n >= 1e6) return (n/1e6).toFixed(2).replace(/\.00$/,'')+'M';
   if (n >= 1e3) return (n/1e3).toFixed(2).replace(/\.00$/,'')+'k';
-  return Math.floor(n).toString();
+  return Math.floor(n).toFixed(2);
 }
+
+// Helper to render buff effect as a human-friendly label
+function formatBuffEffect(bf){
+  if (!bf) return '';
+  const pct = Math.round((bf.effectValue || 0) * 100);
+  switch(bf.buffType){
+    case 'coin_mult':      return `+${pct}% coins`;
+    case 'item_eff':       return `+${pct}% item efficiency`;
+    case 'merge_bonus':    return `+${pct}% merge bonus`;
+    case 'prestige_boost': return `+${pct}% prestige`;
+    default:               return bf.description || `${bf.buffType} +${pct}%`;
+  }
+}
+
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function nowTs(){return Date.now();}
 
@@ -638,11 +573,11 @@ function createMulberry32(seed){
    ========================== */
 const RARITIES = [
   {id:'Common', color:'#A0A0A0', coinBase:1, basePrice:50, multiplier:1, rate:0.45},
-  {id:'Uncommon', color:'#2ECC71', coinBase:10, basePrice:500, multiplier:2, rate:0.35},
-  {id:'Rare', color:'#3498DB', coinBase:650, basePrice:50000, multiplier:3, rate:0.10},
-  {id:'Epic', color:'#9B59B6', coinBase:10000, basePrice:1000000, multiplier:5, rate:0.05},
-  {id:'Legendary', color:'#F1C40F', coinBase:65000, basePrice:5000000, multiplier:10, rate:0.03},
-  {id:'Mythic', color:'#E74C3C', coinBase:500000, basePrice:100000000, multiplier:20, rate:0.02}
+  {id:'Uncommon', color:'#2ECC71', coinBase:5, basePrice:200, multiplier:2, rate:0.35},
+  {id:'Rare', color:'#3498DB', coinBase:50, basePrice:10000, multiplier:3, rate:0.10},
+  {id:'Epic', color:'#9B59B6', coinBase:500, basePrice:100000, multiplier:5, rate:0.05},
+  {id:'Legendary', color:'#F1C40F', coinBase:5000, basePrice:1000000, multiplier:10, rate:0.03},
+  {id:'Mythic', color:'#E74C3C', coinBase:50000, basePrice:100000000, multiplier:20, rate:0.02}
 ];
 const RARITY_MAP = Object.fromEntries(RARITIES.map(r=>[r.id,r]));
 
@@ -691,6 +626,9 @@ const game = {
   shopTimerRemaining: 60,
   mergeSlots: [null,null,null],
   mergeEnhPct: 0,
+  // merge enhancement bookkeeping
+  pendingEnhCost: 0,
+  enhanceStep: 0,
   lastMergeResult: null,
   tooltipTarget: null,
   dragging: null, // {item,source,type,originIndex}
@@ -743,7 +681,7 @@ function createItemFromRarity(rarityName){
   const suf = SUFFIX[Math.floor(rng()*SUFFIX.length)];
   const name = `${adj} ${noun} ${suf}`;
   const desc = `${rarityName} item. ${adj} ${noun} imbued with mysterious potential.`;
-  const f = Number((randomFloat(0,10)).toFixed(2));
+  const f = Number((randomFloat(0,10)).toFixed(8));
   const floatMult = 1 + (f/10) * 9; // m = 1 + (f/10)*9 => 1..10
   const buyPrice = Math.max(1, Math.round(rarity.basePrice * rarity.multiplier * floatMult));
   const sellPrice = Math.floor(buyPrice * 0.5);
@@ -768,7 +706,7 @@ function createBuffOfRarity(rarityName){
   const effect = +(t.baseEffect * rarity.multiplier).toFixed(3);
   const name = `${t.name} (${rarityName})`;
   const desc = `${t.desc} Effect: +${Math.round(effect*100)}% (scaled by rarity).`;
-  const f = Number((randomFloat(0,10)).toFixed(2));
+  const f = Number((randomFloat(0,10)).toFixed(8));
   const floatMult = 1 + (f/10) * 9;
   const buyPrice = Math.max(1, Math.round(rarity.basePrice * rarity.multiplier * floatMult * 0.8));
   const sellPrice = Math.floor(buyPrice * 0.5);
@@ -1058,45 +996,123 @@ function rarityTagClass(rarity) {
 function renderShop(){
   const container = document.getElementById('shopGrid');
   container.innerHTML = '';
-  // shopContents: first 6 are items, last 3 are buffs (as generated earlier)
-  for(let i=0;i<9;i++){
+
+  function sectionDivider(label){
+    const wrap = document.createElement('div');
+    wrap.style.gridColumn = '1 / -1';
+    wrap.style.display = 'flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.margin = '10px 0';
+
+    const lineLeft = document.createElement('div');
+    lineLeft.style.flex = '1';
+    lineLeft.style.height = '1px';
+    lineLeft.style.background = 'rgba(255,255,255,0.2)';
+
+    const text = document.createElement('div');
+    text.innerText = label;
+    text.style.fontSize = '11px';
+    text.style.opacity = '0.7';
+    text.style.padding = '0 8px';
+    text.style.whiteSpace = 'nowrap';
+
+    const lineRight = document.createElement('div');
+    lineRight.style.flex = '1';
+    lineRight.style.height = '1px';
+    lineRight.style.background = 'rgba(255,255,255,0.2)';
+
+    wrap.appendChild(lineLeft);
+    wrap.appendChild(text);
+    wrap.appendChild(lineRight);
+
+    return wrap;
+  }
+
+  /* top section */
+  container.appendChild(sectionDivider('ITEMS'));
+
+  for(let i = 0; i < 9; i++){
+
+    /* buffs section header */
+    if (i === 6){
+      container.appendChild(sectionDivider('BUFFS'));
+    }
+
+    const sc = game.save.shopContents[i];
+    if (!sc) continue;
+
     const slot = document.createElement('div');
     slot.className = 'shop-item';
-    const sc = game.save.shopContents[i];
-    const left = document.createElement('div');
-    left.className = 'left';
-    const title = document.createElement('div');
-    title.style.display = 'flex';
-    title.style.gap = '8px';
-    const colorBand = document.createElement('div');
-    colorBand.style.width='10px'; colorBand.style.height='30px'; colorBand.style.borderRadius='6px';
-    colorBand.style.background = RARITY_MAP[sc.rarity].color;
-    const name = document.createElement('div');
-    name.innerHTML = `
-    <div style="font-weight:700">${sc.preview.name}</div>
-    <div
-        class="rarity-tag ${rarityTagClass(sc.rarity)}"
-        style="color:${RARITY_MAP[sc.rarity].color}"
-    >
-        ${sc.rarity}
-    </div>
-    `;
+    slot.style.display = 'flex';
+    slot.style.alignItems = 'center';
+    slot.style.gap = '10px';
 
-        title.appendChild(colorBand); title.appendChild(name);
-    left.appendChild(title);
-    slot.appendChild(left);
+    /* color band */
+    const colorBand = document.createElement('div');
+    colorBand.style.width = '10px';
+    colorBand.style.borderRadius = '6px';
+    colorBand.style.background = RARITY_MAP[sc.rarity].color;
+    colorBand.style.alignSelf = 'stretch';
+
+    /* content */
+    const content = document.createElement('div');
+    content.style.display = 'flex';
+    content.style.flexDirection = 'column';
+    content.style.flex = '1';
+
+    /* rarity tag */
+    const rarity = document.createElement('div');
+    rarity.className = `rarity-tag ${rarityTagClass(sc.rarity)}`;
+    rarity.style.color = RARITY_MAP[sc.rarity].color;
+    rarity.style.fontSize = '11px';
+    rarity.style.alignSelf = 'flex-start';
+    rarity.style.marginBottom = '4px';
+    rarity.innerText = sc.rarity;
+
+    /* name */
+    const nameEl = document.createElement('div');
+    nameEl.style.fontWeight = '700';
+    nameEl.style.marginBottom = '2px';
+    nameEl.innerText = sc.preview.name;
+
+    /* info */
+    const infoEl = document.createElement('div');
+    infoEl.style.fontSize = '12px';
+    infoEl.style.color = RARITY_MAP[sc.rarity].color;
+
+    if (sc.type === 'item'){
+      infoEl.innerText = `${formatCompact(sc.preview.coinPerSec || 0)}/s`;
+    } else {
+      infoEl.innerText = formatBuffEffect(sc.preview);
+    }
+
+    content.appendChild(rarity);
+    content.appendChild(nameEl);
+    content.appendChild(infoEl);
+
+    /* buy button */
     const buy = document.createElement('div');
     buy.className = 'shop-buy';
-    buy.innerText = formatCompact(sc.preview.buyPrice || sc.preview.buyPrice);
-    buy.onclick = ()=> {
-      purchaseShopItem(i);
-    };
+    buy.innerText = formatCompact(sc.preview.buyPrice);
+    buy.onclick = () => purchaseShopItem(i);
+
+    slot.appendChild(colorBand);
+    slot.appendChild(content);
     slot.appendChild(buy);
+
+    
+
     container.appendChild(slot);
   }
 }
+
+/* Update the "Refreshes in Xs" label every second */
 function renderShopTimer(){
-  // Could show remaining seconds but omitted for compactness
+  const el = document.getElementById('shopRefreshLabel');
+  if (!el) return;
+  // Clamp to 0 so UI never shows negative
+  const sec = Math.max(0, Math.floor(game.shopTimerRemaining || 0));
+  el.innerText = `Refreshes in ${sec}s`;
 }
 function refreshShopAuto(){
   // re-generate shop deterministically using saved shopSeed and global RNG
@@ -1133,7 +1149,13 @@ function purchaseShopItem(index){
   placeInInventory(game.save.inventory, item, fit.x, fit.y);
   pushLog(`Bought ${item.name} (${item.rarity}) for ${formatCompact(item.buyPrice)} coins.`);
   // replace shop slot
-  game.save.shopContents[index] = {type:sc.type, rarity: weightedRarityRoll(), preview: (sc.type==='item'? createItemFromRarity(weightedRarityRoll()) : createBuffOfRarity(weightedRarityRoll()))};
+// pick one rarity and reuse it so tag and preview match
+const newRarity = weightedRarityRoll();
+game.save.shopContents[index] = {
+  type: sc.type,
+  rarity: newRarity,
+  preview: (sc.type === 'item' ? createItemFromRarity(newRarity) : createBuffOfRarity(newRarity))
+};
   renderAll();
   saveGame();
 }
@@ -1180,12 +1202,31 @@ function renderInventory(){
       card.className = cell.inventorySize.w === 2 ? 'buff-card' : 'item-card';
       card.style.background = `linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.00))`;
       card.style.border = `2px solid ${RARITY_MAP[cell.rarity].color}`;
-      card.innerHTML = `
-        <div class="item-name">${cell.name.split(' ')[0]}</div>
-        <div style="color:${RARITY_MAP[cell.rarity].color}">
-            ${cell.rarity}
-        </div>
+      // item or buff
+        const isBuff = cell.type === 'buff';
+        card.className = isBuff ? 'buff-card' : 'item-card';
+        card.style.background = `linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.00))`;
+        card.style.border = `2px solid ${RARITY_MAP[cell.rarity].color}`;
+
+        if (!isBuff) {
+        // Item: show coin/sec (compact)
+        card.innerHTML = `
+            <div class="item-name">${cell.name.split(' ')[0]}</div>
+            <div class="item-sub" style="color:${RARITY_MAP[cell.rarity].color}">
+            ${formatCompact(Number(cell.coinPerSec || 0).toFixed(0))}/s
+            </div>
         `;
+        } else {
+        // Buff: show buff name + human readable effect
+        const effectLabel = formatBuffEffect(cell);
+        card.innerHTML = `
+            <div class="item-name">${cell.name.split(' ')[0]}</div>
+            <div class="item-sub" style="color:${RARITY_MAP[cell.rarity].color};font-size:12px">
+            ${effectLabel}
+            </div>
+        `;
+        }
+
 
       // drag handlers
       card.draggable = true;
@@ -1193,10 +1234,13 @@ function renderInventory(){
       // touch: long-press for tooltip or drag
       addTouchDragAndTooltip(card, cell, i, 'inventory');
       // keyboard focus
-      card.tabIndex = 0;
-      card.addEventListener('keydown', (e)=> keyboardItemAction(e, cell, i, 'inventory'));
-      // click => inspect / tooltip
-      card.addEventListener('click', ()=> showTooltipForItem(cell, {source:'inventory', index:i, element:card}));
+      // after addTouchDragAndTooltip(card, cell, i, 'inventory');
+        card.tabIndex = 0;
+
+        // show tooltip on hover (desktop)
+        card.addEventListener('mouseenter', () => showTooltipForItem(cell, { source: 'inventory', index: i, element: card }));
+        card.addEventListener('mouseleave', () => hideTooltipAfterDelay());
+
       slot.appendChild(card);
     }
     // slot dragover and drop
@@ -1267,7 +1311,13 @@ function renderEquipment(){
       card.draggable = true;
       card.addEventListener('dragstart', (e)=> startDragFromEquipment(e, i));
       addTouchDragAndTooltip(card, it, i, 'equipment');
-      card.tabIndex = 0;
+      // after addTouchDragAndTooltip(card, it, i, 'equipment');
+card.tabIndex = 0;
+
+// show tooltip on hover (desktop)
+card.addEventListener('mouseenter', () => showTooltipForItem(it, { source: 'equipment', index: i, element: card }));
+card.addEventListener('mouseleave', () => hideTooltipAfterDelay());
+
       slot.appendChild(card);
     } else {
       slot.innerHTML = `<div style="font-size:12px;color:var(--muted)">Empty</div>`;
@@ -1310,11 +1360,24 @@ function renderBuffArea(){
       card.style.border = `2px solid ${RARITY_MAP[bf.rarity].color}`;
       card.style.width = '120px';
       card.style.height = '44px';
-      card.innerHTML = `<div style="font-weight:700">${bf.name.split(' ')[0]}</div><div style="font-size:12px">${bf.buffType}</div>`;
+        const effectLabel = formatBuffEffect(bf);
+
+        card.innerHTML = `
+        <div class="item-name">${bf.name.split(' ')[0]}</div>
+        <div class="item-sub" style="color:${RARITY_MAP[bf.rarity].color};font-size:12px">
+            ${effectLabel}
+        </div>
+        `;
       card.draggable = true;
       card.addEventListener('dragstart', (e)=> startDragFromBuffEquip(e, i));
       addTouchDragAndTooltip(card, bf, i, 'buff-equip');
-      card.tabIndex = 0;
+// after addTouchDragAndTooltip(card, bf, i, 'buff-equip');
+card.tabIndex = 0;
+
+// show tooltip on hover (desktop)
+card.addEventListener('mouseenter', () => showTooltipForItem(bf, { source: 'buff-equip', index: i, element: card }));
+card.addEventListener('mouseleave', () => hideTooltipAfterDelay());
+
       slot.appendChild(card);
     } else {
       slot.innerHTML = `<div style="font-size:12px;color:var(--muted)">Empty</div>`;
@@ -1354,26 +1417,75 @@ function startDragFromMergeSlot(e, mergeIndex){
 function attemptAddToMergeSlot(drag, mergeSlotIdx){
   const item = drag.item;
   if (!item) return;
-  // only 1x1 items should be allowed in merge slots
+
+  // merge slots accept 1x1
   if (item.inventorySize.w !== 1 || item.inventorySize.h !== 1){
     alert('Only 1×1 items can be placed into merge slots.');
     game.dragging = null;
     return;
   }
-  if (game.mergeSlots[mergeSlotIdx]) {
-    alert('Merge slot occupied.');
-    game.dragging = null;
+
+  // no-op same merge slot
+  if (drag.source === 'merge' && drag.index === mergeSlotIdx){
+    game.dragging = null; return;
+  }
+
+  const occupying = game.mergeSlots[mergeSlotIdx];
+
+  // empty -> normal
+  if (!occupying){
+    removeDraggedSource(drag);
+    game.mergeSlots[mergeSlotIdx] = item;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Placed ${item.name} into merge slot ${mergeSlotIdx+1}.`);
     return;
   }
 
-  // remove from source
-  removeDraggedSource(drag);
+  // occupied -> require same size (1x1)
+  if (item.inventorySize.w !== occupying.inventorySize.w ||
+      item.inventorySize.h !== occupying.inventorySize.h){
+    alert('Cannot swap items of different sizes.');
+    game.dragging = null; return;
+  }
 
-  game.mergeSlots[mergeSlotIdx] = item;
-  pushLog(`Placed ${item.name} into merge slot ${mergeSlotIdx + 1}.`);
+  // merge <-> merge swap
+  if (drag.source === 'merge'){
+    game.mergeSlots[drag.index] = occupying;
+    game.mergeSlots[mergeSlotIdx] = item;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped merge slots ${drag.index+1} ↔ ${mergeSlotIdx+1}.`);
+    return;
+  }
+
+  // inventory -> merge swap: move occupying into inventory top-left of dragged item
+  if (drag.source === 'inventory'){
+    const srcIdx = drag.index;
+    const srcPos = xyFromIndex(srcIdx);
+    removeFromInventory(game.save.inventory, srcIdx);
+    game.mergeSlots[mergeSlotIdx] = item;
+    placeInInventory(game.save.inventory, occupying, srcPos.x, srcPos.y);
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped ${item.name} (inventory) ↔ ${occupying.name} (merge).`);
+    return;
+  }
+
+  // equipment/buff -> merge: both must be 1x1 (buffs normally 2x2 so blocked by size check)
+  if (drag.source === 'equipment' || drag.source === 'buff-equip'){
+    removeDraggedSource(drag);
+    game.mergeSlots[mergeSlotIdx] = item;
+    if (drag.source === 'equipment'){
+      game.save.equipment[drag.index] = occupying;
+    } else {
+      game.save.buffsEquipped[drag.index] = occupying;
+    }
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Placed ${item.name} into merge and returned ${occupying.name} to ${drag.source}.`);
+    return;
+  }
+
+  // fallback
+  alert('Cannot place item in that configuration.');
   game.dragging = null;
-  renderAll();
-  saveGame();
 }
 
 /* ----------------------------
@@ -1382,20 +1494,132 @@ function attemptAddToMergeSlot(drag, mergeSlotIdx){
    ---------------------------- */
 function attemptPlaceDraggedItemToInventory(drag, x, y){
   const item = drag.item;
-  if (!canPlaceInInventory(game.save.inventory, item, x, y)){
-    alert('Cannot place item there.');
+  const targetIdx = indexFromXY(x,y);
+  const grid = game.save.inventory;
+
+  // if dragging from inventory and dropping onto same top-left index -> do nothing
+  if (drag.source === 'inventory' && drag.index === targetIdx){
     game.dragging = null;
     return;
   }
-  // remove from source
-  removeDraggedSource(drag);
 
-  // place into target
-  placeInInventory(game.save.inventory, item, x, y);
+  const targetCell = grid[targetIdx];
+  if (!targetCell){
+    // empty -> normal place
+    if (!canPlaceInInventory(grid, item, x, y)){
+      alert('Cannot place item there.');
+      game.dragging = null;
+      return;
+    }
+    removeDraggedSource(drag);
+    placeInInventory(grid, item, x, y);
+    game.dragging = null;
+    pushLog(`Moved ${item.name} to inventory.`);
+    renderAll(); saveGame();
+    return;
+  }
+
+  // if target is a span placeholder, resolve to its top-left index
+  if (targetCell.span && targetCell.topLeft !== undefined){
+    const tl = targetCell.topLeft;
+    // if user attempted to drop onto a spanned cell, treat it as dropping on the top-left cell
+    return attemptPlaceDraggedItemToInventory(drag, xyFromIndex(tl).x, xyFromIndex(tl).y);
+  }
+
+  // targetCell is an actual item
+  const targetItem = targetCell;
+  // only allow swap if both items have same inventory size (simple rule)
+  if (item.inventorySize.w !== targetItem.inventorySize.w || item.inventorySize.h !== targetItem.inventorySize.h){
+    alert('Cannot swap items of different sizes.');
+    game.dragging = null;
+    return;
+  }
+
+  // Prepare swap:
+  // get original positions
+  const srcIdx = (drag.source === 'inventory') ? drag.index : null;
+
+  // If drag came from inventory, do inventory ↔ inventory swap
+  if (drag.source === 'inventory'){
+    // remove both items from grid
+    removeFromInventory(grid, targetIdx);
+    removeFromInventory(grid, srcIdx);
+    // place dragged item into target position
+    placeInInventory(grid, item, x, y);
+    // place target item into source position
+    const srcXY = xyFromIndex(srcIdx);
+    placeInInventory(grid, targetItem, srcXY.x, srcXY.y);
+    game.dragging = null;
+    pushLog(`Swapped ${item.name} ↔ ${targetItem.name} in inventory.`);
+    renderAll(); saveGame();
+    return;
+  }
+
+  // If drag came from equipment / buff-equip / merge, we will swap into that source slot
+  // but only if the occupying item can be placed into the drag's source slot type.
+  // Example: dragging from equipment -> place occupying item into equipment[drag.index]
+  if (drag.source === 'equipment'){
+    // if dropping an equip's occupying item back into the same equipment slot -> no-op
+    if (drag.index === slotIndexFromEquipment) { /* not applicable here */ }
+
+    // perform swap: put dragged item into equipment slot, put occupying item into equipment[drag.index] or into inventory fallback
+    // For inventory-targeted drop, we want occupying equipment item to move into inventory slot that we came from.
+    // So: remove dragged source (equipment slot) then place occupying into inventory at drag.index (which is inventory idx only when the drag source is inventory).
+    // Because this function handles an inventory drop target, a drag from 'equipment' means the source is equipment[drag.index].
+    // We'll do: remove equipment[drag.index], place drag.item at inventory target, then try to place occupying (targetItem) into equipment[drag.index].
+    // But equip items are 1x1 and targetItem is in inventory; this is an uncommon path — keep fallback: put occupying into first free inventory slot.
+    removeDraggedSource(drag); // clears game.save.equipment[drag.index]
+    // place dragged item into inventory target
+    placeInInventory(grid, item, x, y);
+    // try to move targetItem into equipment[drag.index] if fits (both are 1x1)
+    if (targetItem.inventorySize.w === 1 && targetItem.inventorySize.h === 1){
+      // remove the targetItem from inventory top-left before moving (we haven't removed it yet)
+      removeFromInventory(grid, targetIdx);
+      // place into equipment slot
+      game.save.equipment[drag.index] = targetItem;
+      pushLog(`Swapped equipment ↔ inventory: equipped ${targetItem.name}, placed ${item.name} into inventory.`);
+      game.dragging = null;
+      renderAll(); saveGame();
+      return;
+    } else {
+      // fallback: place occupying into first-fit inventory spot
+      removeFromInventory(grid, targetIdx);
+      const spot = findFirstFit(grid, targetItem);
+      if (spot) {
+        placeInInventory(grid, targetItem, spot.x, spot.y);
+        pushLog(`Swapped (fallback) ${item.name} into inventory and moved ${targetItem.name} to first-fit.`);
+        game.dragging = null; renderAll(); saveGame(); return;
+      } else {
+        alert('No space to swap out existing item; action canceled.');
+        // revert: put dragged equipment back where it was
+        game.save.equipment[drag.index] = item;
+        game.dragging = null;
+        renderAll(); saveGame();
+        return;
+      }
+    }
+  }
+
+  // For other sources (buff-equip, merge), do a conservative swap: remove dragged source, put dragged item into inventory, move targetItem into the vacated source (if possible), otherwise first-fit.
+  if (drag.source === 'buff-equip' || drag.source === 'merge'){
+    removeDraggedSource(drag);
+    // put dragged item into inventory target (remove targetItem first)
+    removeFromInventory(grid, targetIdx);
+    placeInInventory(grid, item, x, y);
+
+    // try to put targetItem back into the source slot (buff slot or merge slot)
+    if (drag.source === 'buff-equip'){
+      game.save.buffsEquipped[drag.index] = targetItem;
+    } else if (drag.source === 'merge'){
+      game.mergeSlots[drag.index] = targetItem;
+    }
+    pushLog(`Swapped ${item.name} ↔ ${targetItem.name} between inventory and ${drag.source}.`);
+    game.dragging = null; renderAll(); saveGame(); return;
+  }
+
+  // default reject
+  alert('Cannot swap items in that configuration.');
   game.dragging = null;
-  pushLog(`Moved ${item.name} to inventory.`);
-  renderAll();
-  saveGame();
 }
 
 /* ----------------------------
@@ -1403,65 +1627,407 @@ function attemptPlaceDraggedItemToInventory(drag, x, y){
    - cards placed in merge slots are draggable
    - merge slot elements accept dragover/drop
    ---------------------------- */
-function renderMergePanel(){
+
+/* ===== Merge UI & logic enhancements - inserted by assistant ===== */
+
+const ENHANCE_DIVISORS = [10,8,6,5,4,3,2,1]; // cost = avg / divisor, step advances through this
+
+function getNextEnhanceCost() {
+  const avg = getMergeAveragePrice();
+  if (!avg) return 0;
+  const step = clamp(game.enhanceStep, 0, ENHANCE_DIVISORS.length-1);
+  return Math.max(1, Math.round(avg / ENHANCE_DIVISORS[step]));
+}
+
+function parseNameParts(name){
+  if (!name) return {};
+  const ofIdx = name.indexOf(' of ');
+  if (ofIdx !== -1) {
+    const left = name.slice(0, ofIdx).trim();
+    const suffix = name.slice(ofIdx+1).trim();
+    const leftParts = left.split(' ');
+    return { adj: leftParts[0] || '', noun: leftParts[1] || '', suffix };
+  } else {
+    const parts = name.split(' ');
+    return { adj: parts[0] || '', noun: parts[1] || '', suffix: parts.slice(2).join(' ') || '' };
+  }
+}
+
+function nameMatchesSet(aName, bName){
+  const a = parseNameParts(aName);
+  const b = parseNameParts(bName);
+  if (!a || !b) return false;
+  return (a.adj && a.adj === b.adj) || (a.noun && a.noun === b.noun) || (a.suffix && a.suffix === b.suffix);
+}
+
+function upgradeRarityIndex(idx, stepUp=1){
+  return Math.min(RARITIES.length-1, idx + stepUp);
+}
+function rarityNameToIndex(name){
+  return RARITIES.findIndex(r=>r.id === name);
+}
+function indexToRarityName(i){ return RARITIES[clamp(i,0,RARITIES.length-1)].id; }
+
+function computeMergePreviews(){
+  const set = game.mergeSlots.filter(Boolean);
+  if (set.length !== 3) return [null,null,null];
+
+  const names = set.map(s => s.name);
+  const raritiesIdx = set.map(s => rarityNameToIndex(s.rarity));
+  const allSameRarity = raritiesIdx.every(i => i === raritiesIdx[0]);
+
+  function buildProtoForRarity(rIdx, overrideParts){
+    const rName = indexToRarityName(rIdx);
+    const proto = createItemFromRarity(rName);
+    if (overrideParts){
+      const parts = parseNameParts(proto.name);
+      if (overrideParts.adj) parts.adj = overrideParts.adj;
+      if (overrideParts.noun) parts.noun = overrideParts.noun;
+      if (overrideParts.suffix) parts.suffix = overrideParts.suffix;
+      proto.name = `${parts.adj} ${parts.noun} ${parts.suffix}`.trim();
+    }
+    return proto;
+  }
+
+  const sameNameCounts = {};
+  for(const n of names) sameNameCounts[n] = (sameNameCounts[n] || 0) + 1;
+  const mostCommonName = Object.keys(sameNameCounts).reduce((a,b) => sameNameCounts[a] >= sameNameCounts[b] ? a : b);
+
+  const p0 = parseNameParts(names[0]);
+  const p1 = parseNameParts(names[1]);
+  const p2 = parseNameParts(names[2]);
+  const allSameAdj = p0.adj && p0.adj === p1.adj && p0.adj === p2.adj;
+  const allSameNoun = p0.noun && p0.noun === p1.noun && p0.noun === p2.noun;
+  const allSameSuffix = p0.suffix && p0.suffix === p1.suffix && p0.suffix === p2.suffix;
+  const hasSetMatch = allSameAdj || allSameNoun || allSameSuffix;
+
+  if (allSameRarity && sameNameCounts[mostCommonName] === 3){
+    const baseIdx = raritiesIdx[0];
+    const targetIdx = upgradeRarityIndex(baseIdx, 1);
+    const proto = buildProtoForRarity(targetIdx, parseNameParts(mostCommonName));
+    return [null, {chance:100, itemProto:proto, label:'guaranteed'}, null];
+  }
+
+  if (allSameRarity && hasSetMatch){
+    const baseIdx = raritiesIdx[0];
+    const targetIdx = upgradeRarityIndex(baseIdx, 1);
+    const override = {};
+    if (allSameAdj) override.adj = p0.adj;
+    if (allSameNoun) override.noun = p0.noun;
+    if (allSameSuffix) override.suffix = p0.suffix;
+    const proto = buildProtoForRarity(targetIdx, override);
+    return [null, {chance:100, itemProto:proto, label:'guaranteed'}, null];
+  }
+
+  const pairName = Object.keys(sameNameCounts).find(k => sameNameCounts[k] === 2);
+  if (pairName){
+    const pairIdx = raritiesIdx[names.indexOf(pairName)];
+    const targetIdxSame = upgradeRarityIndex(pairIdx,1);
+    const protoSame = buildProtoForRarity(targetIdxSame, parseNameParts(pairName));
+    const protoRand = buildProtoForRarity(targetIdxSame, null);
+    return [
+      {chance:33.0, itemProto:protoRand, label:'random'},
+      {chance:66.0, itemProto:protoSame, label:'pair'},
+      null
+    ];
+  }
   for(let i=0;i<3;i++){
-    const el = document.querySelector(`.merge-slot[data-merge-slot="${i}"]`);
-    el.innerHTML = '';
-    const it = game.mergeSlots[i];
-    if (it){
+    for(let j=i+1;j<3;j++){
+      if (nameMatchesSet(names[i], names[j])){
+        const pairIdx = raritiesIdx[i];
+        const targetIdxSame = upgradeRarityIndex(pairIdx,1);
+        const override = {};
+        const pa = parseNameParts(names[i]);
+        const pb = parseNameParts(names[j]);
+        if (pa.adj && pa.adj === pb.adj) override.adj = pa.adj;
+        if (pa.noun && pa.noun === pb.noun) override.noun = pa.noun;
+        if (pa.suffix && pa.suffix === pb.suffix) override.suffix = pa.suffix;
+        const protoSame = buildProtoForRarity(targetIdxSame, override);
+        const protoRand = buildProtoForRarity(targetIdxSame, null);
+        return [
+          {chance:33.0, itemProto:protoRand, label:'random'},
+          {chance:66.0, itemProto:protoSame, label:'pair-set'},
+          null
+        ];
+      }
+    }
+  }
+
+  if (allSameRarity){
+    const baseIdx = raritiesIdx[0];
+    const targetIdx = upgradeRarityIndex(baseIdx,1);
+    const avgPrice = getMergeAveragePrice();
+    const lowProto = buildProtoForRarity(targetIdx, null); lowProto.buyPrice = Math.max(1, Math.round(avgPrice * 0.85));
+    const midProto = buildProtoForRarity(targetIdx, null); midProto.buyPrice = Math.round(avgPrice);
+    const highProto = buildProtoForRarity(targetIdx, null); highProto.buyPrice = Math.round(avgPrice * 1.2);
+    return [
+      {chance:33.3333, itemProto:lowProto, label:'low'},
+      {chance:33.3333, itemProto:midProto, label:'avg'},
+      {chance:33.3333, itemProto:highProto, label:'high'}
+    ];
+  }
+
+  const lowIdx = Math.min(...raritiesIdx);
+  const avgIdx = Math.round((raritiesIdx[0] + raritiesIdx[1] + raritiesIdx[2]) / 3);
+  const highIdx = clamp(Math.max(...raritiesIdx) + 1, 0, RARITIES.length-1);
+  const lowProto = buildProtoForRarity(lowIdx, null);
+  const midProto = buildProtoForRarity(avgIdx, null);
+  const highProto = buildProtoForRarity(highIdx, null);
+  return [
+    {chance:20.0, itemProto:lowProto, label:'low'},
+    {chance:60.0, itemProto:midProto, label:'avg'},
+    {chance:20.0, itemProto:highProto, label:'high'}
+  ];
+}
+
+function computeOddsText(previews){
+  if (!previews || previews.length === 0) return '';
+  const arr = previews.slice(0,3).map(p => p ? p.chance : 0);
+  if (arr[0] === 0 && arr[1] === 100 && arr[2] === 0) return '100% → middle (guaranteed)';
+  return `${(arr[0]||0).toFixed(2)}% → low / ${(arr[1]||0).toFixed(2)}% → avg / ${(arr[2]||0).toFixed(2)}% → high`;
+}
+
+
+function renderMergePanel(){
+  // Clear and setup merge slot nodes
+  const slots = document.querySelectorAll('[data-merge-slot]');
+  for(let i=0;i<slots.length;i++){
+    const slot = slots[i];
+    // remove all children & listeners by replacing node
+    const clean = slot.cloneNode(false);
+    slot.parentNode.replaceChild(clean, slot);
+  }
+
+  const slotNodes = document.querySelectorAll('[data-merge-slot]');
+  for(let i=0;i<slotNodes.length;i++){
+    const slot = slotNodes[i];
+    slot.dataset.mergeIndex = i;
+    const item = game.mergeSlots[i];
+    // ensure panel styling is preserved
+    slot.classList.remove('occupied');
+    if (item){
+      slot.classList.add('occupied');
+      // create a proper item-card (same look as inventory)
       const card = document.createElement('div');
       card.className = 'item-card';
-      card.style.border = `2px solid ${RARITY_MAP[it.rarity].color}`;
-      card.innerHTML = `<div style="font-weight:700">${it.name.split(' ')[0]}</div><div style="font-size:12px">${it.rarity}</div>`;
-      // make merge-slot item draggable so player can drag it out
       card.draggable = true;
+      card.style.width = '52px';
+      card.style.height = '52px';
+      card.style.border = `2px solid ${RARITY_MAP[item.rarity].color}`;
+      card.innerHTML = `<div class="item-name">${item.name.split(' ')[0]}</div><div class="item-sub" style="color:${RARITY_MAP[item.rarity].color};font-size:12px">${formatCompact(Number(item.coinPerSec||0).toFixed(0))}/s</div>`;
+      // drag from merge slot
       card.addEventListener('dragstart', (e)=> startDragFromMergeSlot(e, i));
-      // touch/tooltip integration (reuse existing helper)
-      addTouchDragAndTooltip(card, it, i, 'merge');
-      // allow keyboard focus if desired
-      card.tabIndex = 0;
-      el.appendChild(card);
-    } else {
-      // keep the slot empty
+      // allow double-click to return to inventory
+      slot.addEventListener('dblclick', ()=> {
+        const it = game.mergeSlots[i];
+        if (!it) return;
+        const spot = findFirstFit(game.save.inventory, it);
+        if (spot) { placeInInventory(game.save.inventory, it, spot.x, spot.y); }
+        else { game.save.coins += it.sellPrice; pushLog(`No space: auto-sold ${it.name} for ${it.sellPrice}.`); }
+        game.mergeSlots[i] = null;
+        renderAll(); saveGame();
+      });
+      slot.appendChild(card);
     }
 
-    // allow dropping into merge slot
-    el.addEventListener('dragover', (e)=> {
+    // make slot accept drops
+    slot.addEventListener('dragover', (e)=> { e.preventDefault(); });
+    slot.addEventListener('drop', (e)=> {
       e.preventDefault();
-      const dragging = game.dragging;
-      if (!dragging) return;
-      // only allow 1x1 items into merge slots
-      if (dragging.item && dragging.item.inventorySize && dragging.item.inventorySize.w === 1 && dragging.item.inventorySize.h === 1) {
-        el.classList.add('highlight-ok');
-      } else {
-        el.classList.add('highlight-bad');
-      }
-    });
-    el.addEventListener('dragleave', ()=> {
-      el.classList.remove('highlight-ok','highlight-bad');
-    });
-    el.addEventListener('drop', (e)=> {
-      e.preventDefault();
-      el.classList.remove('highlight-ok','highlight-bad');
       if (!game.dragging) return;
-      attemptAddToMergeSlot(game.dragging, i);
+      const idx = parseInt(slot.dataset.mergeIndex);
+      attemptAddToMergeSlot(game.dragging, idx);
+    });
+    slot.addEventListener('click', ()=> {
+      if (game.dragging){ const idx = parseInt(slot.dataset.mergeIndex); attemptAddToMergeSlot(game.dragging, idx); }
     });
   }
 
-  // update merge odds display (base 60/30/10)
-  const base = [60,30,10];
-  const enhanced = game.mergeEnhPct;
-  const high = clamp(base[2] + enhanced, 0, 100);
-  const remaining = 100 - high;
-  const low = Math.round(remaining * (base[1]/(base[0]+base[1])));
-  const mid = remaining - low;
-  document.getElementById('mergeOdds').innerText = `${mid}% → avg / ${low}% → lower / ${high}% → higher`;
-  // compute enhancement cost (150% of average price)
-  const avg = getMergeAveragePrice();
-  const cost = Math.round(avg * 1.5 * ((game.mergeEnhPct/10)+1)); // each enhancement step increases cost a bit
-  document.getElementById('mergeCost').innerText = `Enhance cost (approx): ${formatCompact(cost)} coins`;
-  document.getElementById('mergeEnhPct').innerText = `${game.mergeEnhPct}%`;
+  // update helper text when not ready
+  const set = game.mergeSlots.filter(Boolean);
+  if (set.length < 3){
+    const o = document.getElementById('mergeOdds'); if (o) o.innerText = 'Place 3 items to preview merge outcomes';
+    const c = document.getElementById('mergeCost'); if (c) c.innerText = `Enhance cost: —`;
+    const p = document.getElementById('mergeEnhPct'); if (p) p.innerText = `${game.mergeEnhPct}%`;
+  }
+
+  // compute previews and render into dedicated preview container
+  const previews = computeMergePreviews();
+
+  // store signature+previews so performMerge can use the exact same prototypes
+  game._mergeSignature = game.mergeSlots.map(s => s ? s.id : '').join('|');
+  // shallow clone previews (we'll only rely on .itemProto fields)
+  game._lastComputedPreviews = previews.map(p => p ? { chance: p.chance, label: p.label, itemProto: Object.assign({}, p.itemProto) } : null);
+
+  let previewWrap = document.getElementById('mergePreviewWrap');
+  if (!previewWrap){
+    const mergePanel = document.querySelector('#mergeColumn .merge-panel') || document.querySelector('#mergeColumn') || document.body;
+    previewWrap = document.createElement('div');
+    previewWrap.id = 'mergePreviewWrap';
+    previewWrap.style.display = 'flex';
+    previewWrap.style.gap = '8px';
+    previewWrap.style.alignItems = 'center';
+    mergePanel.appendChild(previewWrap);
+  }
+
+  // clear previews
+  previewWrap.innerHTML = '';
+
+  // create three preview panels that match merge-slot visual size
+  for(let pos=0; pos<3; pos++){
+    const pv = document.createElement('div');
+    pv.className = 'panel merge-preview-panel';
+    // make it same square as .merge-slot (72×72 by CSS in this file)
+    pv.style.width = '72px';
+    pv.style.height = '72px';
+    pv.style.display = 'flex';
+    pv.style.flexDirection = 'column';
+    pv.style.alignItems = 'center';
+    pv.style.justifyContent = 'center';
+    pv.style.gap = '6px';
+
+    const previewData = previews[pos] || null;
+    if (previewData){
+      const proto = previewData.itemProto || {};
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.style.width = '72px';
+      card.style.height = '72px';
+      card.style.cursor = 'default';
+      try { card.style.border = `2px solid ${RARITY_MAP[proto.rarity].color}`; } catch(e){}
+      const name = proto.name || proto.rarity || 'Result';
+      const rarity = proto.rarity || 'Common';
+      card.innerHTML = `<div style="font-weight:700">${name.split(' ')[0]}</div><div style="font-size:12px;color:${RARITY_MAP[rarity].color}">${formatCompact((proto.coinPerSec||0).toFixed(0))}/s</div>`;
+      const label = document.createElement('div');
+      label.style.fontSize = '11px';
+      label.style.color = 'var(--muted)';
+      label.innerText = `${previewData.label || ''} — ${(previewData.chance||0).toFixed(2)}%`;
+      pv.appendChild(card);
+      pv.appendChild(label);
+    } else {
+      pv.innerHTML = `<div style="color:var(--muted);font-size:13px">No preview</div>`;
+    }
+    previewWrap.appendChild(pv);
+  }
+
+  // update odds text and enhance cost / pct
+  const oddsEl = document.getElementById('mergeOdds'); if (oddsEl) oddsEl.innerText = computeOddsText(previews);
+  const costEl = document.getElementById('mergeCost'); if (costEl) costEl.innerText = `Enhance cost: ${formatCompact(getNextEnhanceCost())}`;
+  const pctEl = document.getElementById('mergeEnhPct'); if (pctEl) pctEl.innerText = `${game.mergeEnhPct}%`;
+
+  // update merge button text (shows merge cost + pending enhance)
+  const mergeBtn = document.getElementById('btnMerge');
+  const mergeCost = Math.round(getMergeAveragePrice() * 3);
+  if (mergeBtn) mergeBtn.innerText = mergeCost ? `Merge (${formatCompact(mergeCost + game.pendingEnhCost)})` : 'Merge';
+
+  const enhanceBtn = document.getElementById('btnEnhance');
+  if (enhanceBtn){ const nextCost = getNextEnhanceCost(); enhanceBtn.innerText = nextCost ? `Enhance (${formatCompact(nextCost)})` : 'Enhance'; }
 }
+
+function buyMergeEnhancement(){
+  const avg = getMergeAveragePrice();
+  if (avg === 0){ alert('Place 3 items to see enhancement cost.'); return; }
+  if (game.mergeEnhPct >= 100){ alert('Enhancement already at maximum chance.'); return; }
+  const nextCost = getNextEnhanceCost();
+  // Do NOT deduct coins now — queue the enhancement cost. It will be charged on actual Merge.
+  game.pendingEnhCost = (game.pendingEnhCost || 0) + nextCost;
+  game.enhanceStep = Math.min((game.enhanceStep||0) + 1, ENHANCE_DIVISORS.length - 1);
+  game.mergeEnhPct = clamp(game.mergeEnhPct + 5, 0, 100);
+  pushLog(`Queued merge enhancement +5% (pending ${formatCompact(nextCost)}). Enh total pending: ${formatCompact(game.pendingEnhCost)}.`);
+  renderMergePanel(); updateDisplays(); saveGame();
+}
+
+function clearMergeSlots(){
+  for(let i=0;i<3;i++){
+    const it = game.mergeSlots[i];
+    if (it){
+      const spot = findFirstFit(game.save.inventory, it);
+      if (spot) placeInInventory(game.save.inventory, it, spot.x, spot.y);
+      else {
+        game.save.coins += it.sellPrice;
+        pushLog(`No inventory space to return ${it.name}; auto-sold for ${it.sellPrice} coins.`);
+      }
+      game.mergeSlots[i] = null;
+    }
+  }
+  game.mergeEnhPct = 0;
+  game.pendingEnhCost = 0;
+  game.enhanceStep = 0;
+  try { renderMergePanel(); renderInventory(); } catch(e){}
+  saveGame();
+}
+
+function performMerge(){
+  const set = game.mergeSlots.filter(Boolean);
+  if (set.length !== 3){ alert('Place exactly 3 items to merge.'); return; }
+
+  const avg = getMergeAveragePrice();
+  const mergeCost = Math.round(avg * 3);
+  const pending = Math.round(game.pendingEnhCost || 0);
+  const totalCost = mergeCost + pending;
+  if (game.save.coins < totalCost){ alert(`Not enough coins to complete merge. Need ${formatCompact(totalCost)} coins.`); return; }
+
+  // charge now
+  game.save.coins -= totalCost;
+
+  // Use stored previews when the slots haven't changed since the last render
+  const currentSig = game.mergeSlots.map(s => s ? s.id : '').join('|');
+  let previews = game._lastComputedPreviews;
+  if (!previews || game._mergeSignature !== currentSig){
+    previews = computeMergePreviews();
+  }
+
+  const odds = previews.map(p => p ? p.chance : 0);
+  const enhanced = game.mergeEnhPct || 0;
+  let highIndex = 2;
+  if (!previews[2] && previews[1] && previews[0]) highIndex = 1;
+  odds[highIndex] = (odds[highIndex] || 0) + enhanced;
+  const totalAfterAdd = odds.reduce((s,x)=>s+(x||0),0);
+  if (totalAfterAdd > 0){
+    for(let i=0;i<odds.length;i++) odds[i] = (odds[i] || 0) * (100 / totalAfterAdd);
+  }
+
+  const roll = rng()*100;
+  let cumulative = 0; let chosenIdx = 1;
+  for(let i=0;i<odds.length;i++){ cumulative += odds[i] || 0; if (roll <= cumulative) { chosenIdx = i; break; } }
+
+  const chosenPreview = previews[chosenIdx] || previews[1];
+  if (!chosenPreview){ alert('Merge failed (internal).'); return; }
+
+  // Create final merged item using the exact prototype shown in preview
+  const finalProto = chosenPreview.itemProto;
+  const finalRarity = finalProto.rarity || finalProto.Rarity || 'Common';
+  const merged = createItemFromRarity(finalRarity);
+  // copy visible/important fields from prototype so it matches preview
+  if (finalProto.name) merged.name = finalProto.name;
+  if (finalProto.buyPrice) merged.buyPrice = finalProto.buyPrice;
+  if (finalProto.coinPerSec) merged.coinPerSec = finalProto.coinPerSec;
+  merged.sellPrice = Math.floor((merged.buyPrice || 1) * 0.5);
+  merged.createdFromMerge = true;
+
+  // place or auto-sell
+  const spot = findFirstFit(game.save.inventory, merged);
+  if (spot) placeInInventory(game.save.inventory, merged, spot.x, spot.y);
+  else { game.save.coins += merged.sellPrice; pushLog(`No inventory space; merged item auto-sold for ${merged.sellPrice}.`); }
+
+  // award gems
+  const gemTable = {'Common':1,'Uncommon':2,'Rare':3,'Epic':5,'Legendary':10,'Mythic':30};
+  const gemsAward = gemTable[merged.rarity] || 0;
+  if (gemsAward > 0) { game.save.gems += gemsAward; pushLog(`Merge result: ${merged.name} (${merged.rarity}) — awarded ${gemsAward} gems.`); }
+  else pushLog(`Merge result: ${merged.name} (${merged.rarity}).`);
+
+  // clear merge slots + enhancement bookkeeping
+  game.mergeSlots = [null,null,null];
+  game.mergeEnhPct = 0;
+  game.pendingEnhCost = 0;
+  game.enhanceStep = 0;
+  game._lastComputedPreviews = null; game._mergeSignature = '';
+  game.lastMergeResult = { merged, chosenIdx, roll, seed: game.save.rngSeed };
+
+  renderAll(); saveGame();
+}
+/* ===== End of inserted merge enhancements ===== */
+
 
 
 /* Logs */
@@ -1483,115 +2049,280 @@ function startDragFromInventory(e, index){
   const item = game.save.inventory[index];
   if (!item || item.span) return;
   game.dragging = {item, source:'inventory', index};
+  // hide any open tooltip immediately when the player starts dragging
+  if (typeof hideTooltip === 'function') hideTooltip();
   e.dataTransfer?.setData('text/plain', JSON.stringify({source:'inventory',index}));
 }
+
 function startDragFromEquipment(e, index){
   const item = game.save.equipment[index];
   if (!item) return;
   game.dragging = {item, source:'equipment', index};
+  if (typeof hideTooltip === 'function') hideTooltip();
   e.dataTransfer?.setData('text/plain', JSON.stringify({source:'equipment',index}));
 }
 function startDragFromBuffEquip(e, index){
   const item = game.save.buffsEquipped[index];
   if (!item) return;
   game.dragging = {item, source:'buff-equip', index};
+  if (typeof hideTooltip === 'function') hideTooltip();
   e.dataTransfer?.setData('text/plain', JSON.stringify({source:'buff-equip',index}));
 }
 
 /* Attempt to place dragged item into inventory at x,y */
 function attemptPlaceDraggedItemToInventory(drag, x, y){
   const item = drag.item;
-  if (!canPlaceInInventory(game.save.inventory, item, x, y)){
-    alert('Cannot place item there.');
+  const grid = game.save.inventory;
+  const targetIdx = indexFromXY(x, y);
+
+  // no-op: same inventory slot
+  if (drag.source === 'inventory' && drag.index === targetIdx){
     game.dragging = null;
     return;
   }
-  // remove from source
-  removeDraggedSource(drag);
-  // place into target
-  placeInInventory(game.save.inventory, item, x, y);
+
+  let targetCell = grid[targetIdx];
+
+  // resolve span cell -> top-left
+  if (targetCell?.span && targetCell.topLeft !== undefined){
+    const pos = xyFromIndex(targetCell.topLeft);
+    return attemptPlaceDraggedItemToInventory(drag, pos.x, pos.y);
+  }
+
+  // CASE A: empty target -> normal place (validate fit)
+  if (!targetCell){
+    if (!canPlaceInInventory(grid, item, x, y)){
+      alert('Cannot place item there.');
+      game.dragging = null;
+      return;
+    }
+    // clear origin and place
+    removeDraggedSource(drag);
+    placeInInventory(grid, item, x, y);
+    game.dragging = null; renderAll(); saveGame();
+    return;
+  }
+
+  // CASE B: occupied -> attempt swap if sizes match and mutual placement allowed
+  const targetItem = targetCell;
+
+  // require same size
+  if (item.inventorySize.w !== targetItem.inventorySize.w ||
+      item.inventorySize.h !== targetItem.inventorySize.h){
+    alert('Cannot swap items of different sizes.');
+    game.dragging = null;
+    return;
+  }
+
+  // Inventory ↔ Inventory swap
+  if (drag.source === 'inventory'){
+    const srcIdx = drag.index;
+    const srcPos = xyFromIndex(srcIdx);
+
+    removeFromInventory(grid, targetIdx);
+    removeFromInventory(grid, srcIdx);
+
+    placeInInventory(grid, item, x, y);
+    placeInInventory(grid, targetItem, srcPos.x, srcPos.y);
+
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped ${item.name} ↔ ${targetItem.name} in inventory.`);
+    return;
+  }
+
+  // Equipment -> Inventory (swap if equipment accepts targetItem and inventory accepts item)
+  if (drag.source === 'equipment'){
+    // equipment only accepts 1x1: size equality ensures targetItem is 1x1 too
+    // perform swap: remove equipment source; put dragged item into inventory target; put targetItem into equipment[drag.index]
+    removeDraggedSource(drag); // clears equipment[drag.index]
+    removeFromInventory(grid, targetIdx);
+    placeInInventory(grid, item, x, y);
+    game.save.equipment[drag.index] = targetItem;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped ${item.name} (equipment) ↔ ${targetItem.name} (inventory).`);
+    return;
+  }
+
+  // Buff slot -> Inventory (2x2)
+  if (drag.source === 'buff-equip'){
+    removeDraggedSource(drag); // clears buff slot
+    removeFromInventory(grid, targetIdx);
+    placeInInventory(grid, item, x, y);
+    game.save.buffsEquipped[drag.index] = targetItem;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped buff ${item.name} ↔ ${targetItem.name} (inventory).`);
+    return;
+  }
+
+  // Merge -> Inventory (1x1)
+  if (drag.source === 'merge'){
+    removeDraggedSource(drag); // clears merge slot
+    removeFromInventory(grid, targetIdx);
+    placeInInventory(grid, item, x, y);
+    game.mergeSlots[drag.index] = targetItem;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped ${item.name} (merge) ↔ ${targetItem.name} (inventory).`);
+    return;
+  }
+
+  // Fallback - shouldn't reach here
+  alert('Cannot complete swap.');
   game.dragging = null;
-  pushLog(`Moved ${item.name} to inventory.`);
-  renderAll();
-  saveGame();
 }
 
 /* Attempt to equip a dragged item into equipment slot index */
 function attemptEquipDraggedItem(drag, slotIndex){
   const item = drag.item;
+
+  // equipment only accepts 1x1
   if (item.inventorySize.w !== 1 || item.inventorySize.h !== 1){
     alert('Only 1×1 items can be equipped into equipment slots.');
     game.dragging = null;
     return;
   }
-  // if equipment slot occupied, swap into inventory if possible
-  const occupying = game.save.equipment[slotIndex];
-  // remove source
-  removeDraggedSource(drag);
 
-  // place item into equipment
-  game.save.equipment[slotIndex] = item;
-  // if there was occupying item, place it back into inventory if space else drop it into first free spot
-  if (occupying){
-    const spot = findFirstFit(game.save.inventory, occupying);
-    if (spot) placeInInventory(game.save.inventory, occupying, spot.x, spot.y); else {
-      // if no inventory space, try to put it back into the original slot if inventory move came from equip (swap) - but for simplicity, place into equipment slot we vacated
-      // if no space, revert operation
-      alert('No space to swap out existing equipment; action canceled.');
-      // rollback
-      if (drag.source === 'inventory'){
-        // put dragged item back to inventory in same spot
-        placeInInventory(game.save.inventory, item, xyFromIndex(drag.index).x, xyFromIndex(drag.index).y);
-      } else if (drag.source === 'equipment'){
-        game.save.equipment[drag.index] = item;
-      } else if (drag.source === 'buff-equip'){
-        game.save.buffsEquipped[drag.index] = item;
-      }
-      return;
-    }
+  // no-op dragging equipment->same equipment slot
+  if (drag.source === 'equipment' && drag.index === slotIndex){
+    game.dragging = null; return;
   }
-  pushLog(`Equipped ${item.name} to slot ${slotIndex+1}.`);
+
+  const occupying = game.save.equipment[slotIndex];
+
+  // empty slot -> normal equip
+  if (!occupying){
+    removeDraggedSource(drag);
+    game.save.equipment[slotIndex] = item;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Equipped ${item.name} to slot ${slotIndex+1}.`);
+    return;
+  }
+
+  // occupied -> swap allowed only if sizes match (both 1x1 here) and both slot types accept opposite items
+  if (item.inventorySize.w !== occupying.inventorySize.w ||
+      item.inventorySize.h !== occupying.inventorySize.h){
+    alert('Cannot swap items of different sizes.');
+    game.dragging = null; return;
+  }
+
+  // equipment <-> equipment swap
+  if (drag.source === 'equipment'){
+    game.save.equipment[drag.index] = occupying;
+    game.save.equipment[slotIndex] = item;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped equipment slots ${drag.index+1} ↔ ${slotIndex+1}.`);
+    return;
+  }
+
+  // inventory -> equipment swap: place occupying into the inventory slot the dragged item came from
+  if (drag.source === 'inventory'){
+    const srcIdx = drag.index;
+    const srcPos = xyFromIndex(srcIdx);
+    // remove dragged item from inventory
+    removeFromInventory(game.save.inventory, srcIdx);
+    // place dragged item into equipment
+    game.save.equipment[slotIndex] = item;
+    // move occupying into freed inventory cell (fits because both 1x1)
+    placeInInventory(game.save.inventory, occupying, srcPos.x, srcPos.y);
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped ${item.name} (inventory) ↔ ${occupying.name} (equipment).`);
+    return;
+  }
+
+  // merge -> equipment (both 1x1) or buff->equipment (will be blocked by size check if buff is 2x2)
+  if (drag.source === 'merge' || drag.source === 'buff-equip'){
+    // clear source, set equipment to item, return occupying into source (merge slot or buff slot if sizes match)
+    removeDraggedSource(drag); // clear merge/buff source
+    game.save.equipment[slotIndex] = item;
+
+    if (drag.source === 'merge'){
+      game.mergeSlots[drag.index] = occupying;
+    } else {
+      // but buff->equipment should be prevented by size check above; handling kept for consistency
+      game.save.buffsEquipped[drag.index] = occupying;
+    }
+
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped ${item.name} (from ${drag.source}) ↔ ${occupying.name} (equipment).`);
+    return;
+  }
+
+  // fallback
+  alert('Cannot equip item in that configuration.');
   game.dragging = null;
-  renderAll();
-  saveGame();
 }
 
 /* Attempt to equip a buff into buff slot */
 function attemptEquipBuffDraggedItem(drag, slotIndex){
   const item = drag.item;
+
+  // buff slots accept 2x2 only
   if (item.inventorySize.w !== 2 || item.inventorySize.h !== 2){
     alert('Only 2×2 buffs can be placed into buff slots.');
     game.dragging = null;
     return;
   }
-  const occupying = game.save.buffsEquipped[slotIndex];
-  // remove from source
-  removeDraggedSource(drag);
 
-  // place buff
-  game.save.buffsEquipped[slotIndex] = item;
-  // return occupying to inventory
-  if (occupying){
-    const spot = findFirstFit(game.save.inventory, occupying);
-    if (spot) placeInInventory(game.save.inventory, occupying, spot.x, spot.y);
-    else {
-      alert('No space to swap out existing buff; action canceled.');
-      // rollback
-      if (drag.source === 'inventory'){
-        // put dragged item back to previous inventory position
-        placeInInventory(game.save.inventory, item, xyFromIndex(drag.index).x, xyFromIndex(drag.index).y);
-      } else if (drag.source === 'buff-equip'){
-        game.save.buffsEquipped[drag.index] = item;
-      } else if (drag.source === 'equipment'){
-        game.save.equipment[drag.index] = item;
-      }
-      return;
-    }
+  // no-op same buff slot
+  if (drag.source === 'buff-equip' && drag.index === slotIndex){
+    game.dragging = null; return;
   }
-  pushLog(`Equipped buff ${item.name} to buff slot ${slotIndex+1}.`);
+
+  const occupying = game.save.buffsEquipped[slotIndex];
+
+  // empty -> normal equip
+  if (!occupying){
+    removeDraggedSource(drag);
+    game.save.buffsEquipped[slotIndex] = item;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Equipped buff ${item.name} to buff slot ${slotIndex+1}.`);
+    return;
+  }
+
+  // occupied -> require same size (2x2)
+  if (item.inventorySize.w !== occupying.inventorySize.w ||
+      item.inventorySize.h !== occupying.inventorySize.h){
+    alert('Cannot swap buffs/items of different sizes.');
+    game.dragging = null; return;
+  }
+
+  // buff <-> buff swap
+  if (drag.source === 'buff-equip'){
+    game.save.buffsEquipped[drag.index] = occupying;
+    game.save.buffsEquipped[slotIndex] = item;
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped buff slots ${drag.index+1} ↔ ${slotIndex+1}.`);
+    return;
+  }
+
+  // inventory -> buff swap: put occupying into inventory top-left the dragged item came from
+  if (drag.source === 'inventory'){
+    const srcIdx = drag.index;
+    const srcPos = xyFromIndex(srcIdx);
+    removeFromInventory(game.save.inventory, srcIdx);
+    game.save.buffsEquipped[slotIndex] = item;
+    placeInInventory(game.save.inventory, occupying, srcPos.x, srcPos.y);
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Swapped buff ${item.name} (inventory) ↔ ${occupying.name} (buff slot).`);
+    return;
+  }
+
+  // merge/equipment -> buff: only possible if sizes match (equipment is 1x1 so it will be blocked)
+  if (drag.source === 'merge' || drag.source === 'equipment'){
+    removeDraggedSource(drag);
+    game.save.buffsEquipped[slotIndex] = item;
+    if (drag.source === 'merge'){
+      game.mergeSlots[drag.index] = occupying;
+    } else {
+      game.save.equipment[drag.index] = occupying;
+    }
+    game.dragging = null; renderAll(); saveGame();
+    pushLog(`Moved ${item.name} into buff slot and returned ${occupying.name} to ${drag.source}.`);
+    return;
+  }
+
+  // fallback
+  alert('Cannot place buff in that configuration.');
   game.dragging = null;
-  renderAll();
-  saveGame();
 }
 
 /* ==========================
@@ -1608,6 +2339,9 @@ let tooltipPersistent = false;
 
 function showTooltipForItem(item, ctx){
   // ctx: {source: 'inventory'|'equipment'|'buff-equip', index, element}
+    // don't show tooltips while an item/buff is being dragged
+  if (window.game && game.dragging) return;
+
   tooltipPersistent = false;
   renderTooltip(item, ctx);
   positionTooltipNearElement(ctx.element);
@@ -1643,8 +2377,8 @@ function renderTooltip(item, ctx){
   const stats = document.createElement('div');
   stats.style.marginTop = '8px';
   stats.innerHTML = `<div class="sub">Value: <strong>${formatCompact((item.buyPrice || 0).toFixed(1))}</strong></div>
-                    <div class="sub">Coin/s: <strong>${formatCompact((item.coinPerSec || 0).toFixed(1))}</strong></div>
-                     <div class="sub">Float: <strong>${item.float?.toFixed(2) || '0.00'}</strong> (0–10)</div>
+                    <div class="sub">Coin/s: <strong>${formatCompact((item.coinPerSec || 0).toFixed(1))}/s</strong></div>
+                     <div class="sub">Float: <strong>${item.float?.toFixed(8) || '0.00'}</strong></div>
                      <div class="sub">Sell value: <strong>${formatCompact(item.sellPrice || 0)}</strong></div>`;
   tooltipEl.appendChild(stats);
   // actions
