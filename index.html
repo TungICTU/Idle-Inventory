@@ -1,0 +1,2112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Idle Inventory — Single File Incremental Game</title>
+<style>
+  /* ====== Basic layout & theme ====== */
+  :root{
+    --bg:#0f1724;
+    --panel:#0b1220;
+    --accent:#6EE7B7;
+    --muted:#9aa4b2;
+    --glass: rgba(255,255,255,0.03);
+    --radius:12px;
+    --ui-gap:10px;
+    --tooltip-z:2000;
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#071126 0%, #081426 60%);color:#e6eef6;font-family:var(--font-sans);-webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+  .app {display:flex;flex-direction:column;gap:12px;padding:12px;max-width:1300px;margin:0 auto;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .title{display:flex;align-items:center;gap:12px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#13233f,#0a2b4a);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+  h1{font-size:20px;margin:0}
+  .topbar{display:flex;gap:12px;align-items:center}
+  .panel {background:var(--panel);padding:12px;border-radius:var(--radius);box-shadow:0 6px 20px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+  .flexrow{display:flex;gap:12px;align-items:center}
+  .flexcol{display:flex;flex-direction:column;gap:12px}
+  .currency{display:flex;gap:12px;align-items:center}
+  .currency-row {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    width: 100%;
+  }
+  .currency-row > div {
+    text-align: center;
+    min-width: 70px;
+  }
+  .chip{background:var(--glass);padding:8px 10px;border-radius:10px;font-size:14px;color:var(--muted);min-width:120px;text-align:center}
+  .big-num{font-weight:700;color:#fff;font-size:18px}
+  .sub{font-size:12px;color:var(--muted)}
+  main{display:grid;grid-template-columns: 1fr 420px; gap:12px;}
+  .left{display:flex;flex-direction:column;gap:12px}
+  .right{display:flex;flex-direction:column;gap:12px}
+
+  /* ===== Inventory area layout (3x3 grid) ===== */
+  /* Grid positions:
+     1 2 3
+     4 5 6
+     7 8 9
+     - Inventory: 1,2,4,5 (2x2 top-left)
+     - Equipment: 3 (top-right)
+     - Buffs: 6 (middle-right)
+     - Merge: 7,8,9 (bottom row, full width)
+  */
+  .inventory-panel { padding: 12px; }
+  .inventory-layout {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+    align-items: start;
+  }
+
+  /* Inventory occupies positions 1,2,4,5 (2x2 top-left) */
+  #inventoryGrid { 
+    grid-column: 1 / 3; 
+    grid-row: 1 / 3; 
+  }
+
+  /* Equipment occupies position 3 (top-right) */
+  #equipmentColumn { 
+    grid-column: 3 / 4; 
+    grid-row: 1 / 2; 
+  }
+  #equipmentColumn .panel { padding:10px; }
+
+  /* Make equipmentArea a 3x2 grid (3 columns × 2 rows) */
+  #equipmentArea {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(2, 64px);
+    gap: 8px;
+    justify-content: start;
+    align-content: start;
+    padding: 8px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+    border-radius: 8px;
+  }
+  #equipmentArea .equip-slot {
+    width: 64px;
+    height: 64px;
+    padding: 4px;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* Buffs occupy position 6 (middle-right) */
+  #buffColumn { 
+    grid-column: 3 / 4; 
+    grid-row: 2 / 3; 
+  }
+  #buffArea { display:flex;flex-direction:column; gap:8px; padding:8px; }
+  /* Adjust buff-slot to fit the column width */
+  .buff-slot {
+    width: 100%;
+    height: 64px;
+    min-height: 64px;
+    box-sizing: border-box;
+    border-radius:8px;
+    background: rgba(255,255,255,0.02);
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(255,255,255,0.02);
+  }
+
+  /* Merge occupies positions 7,8,9 (bottom row, full width) */
+  #mergeColumn { 
+    grid-column: 1 / 4; 
+    grid-row: 3 / 4; 
+  }
+  /* Tags */
+  /* ===== Animated rarity tags (Epic+) ===== */
+.rarity-tag {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:3px 9px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  background:rgba(255,255,255,0.04);
+  border:1px solid currentColor;
+  position:relative;
+  overflow:hidden;
+}
+
+/* glow sweep */
+.rarity-tag::after {
+  content:'';
+  position:absolute;
+  inset:-40%;
+  background:linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255,255,255,0.35),
+    transparent 70%
+  );
+  transform:translateX(-100%);
+  opacity:0;
+}
+
+/* Epic+ animation */
+.rarity-epic,
+.rarity-legendary,
+.rarity-mythic {
+  animation: tagPulse 2.8s ease-in-out infinite;
+}
+
+.rarity-epic::after,
+.rarity-legendary::after,
+.rarity-mythic::after {
+  animation: tagSweep 3.5s linear infinite;
+  opacity:0.35;
+}
+
+/* Stronger effects per tier */
+.rarity-legendary, .rarity-mythic {
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Animations */
+
+@keyframes tagSweep {
+  0%   { transform:translateX(-120%); }
+  100% { transform:translateX(120%); }
+}
+
+
+  /* ===== Inventory grid ===== */
+  .grid {display:grid;grid-template-columns: repeat(6,64px);grid-template-rows: repeat(6,64px);gap:8px;padding:8px;background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.00));border-radius:8px;position:relative}
+  .slot {width:64px;height:64px;border-radius:8px;background:rgba(255,255,255,0.01);display:flex;align-items:center;justify-content:center;position:relative;transition:box-shadow .12s,transform .12s}
+  .slot.empty{border:1px dashed rgba(255,255,255,0.03)}
+  .slot.highlight-ok{box-shadow:0 0 0 3px rgba(46,204,113,0.14), inset 0 2px 8px rgba(0,0,0,0.5)}
+  .slot.highlight-bad{box-shadow:0 0 0 3px rgba(231,76,60,0.12)}
+  .item-card{width:52px;height:52px;border-radius:8px;padding:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;text-align:center;cursor:grab;user-select:none;touch-action:none}
+  .item-name{font-weight:600;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44px}
+  .item-sub{font-size:10px;opacity:0.9}
+  /* buff occupying 2x2 visual */
+  .buff-card{width:132px;height:132px;min-width:132px;min-height:132px;border-radius:8px;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;cursor:grab;user-select:none;touch-action:none}
+
+  /* shop */
+  .shop-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .shop-item{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .shop-item .left{display:flex;gap:8px;align-items:center}
+  .shop-buy{background:linear-gradient(90deg,#2b6fff,#6b8bff);padding:6px 8px;border-radius:8px;font-weight:700;cursor:pointer}
+  /* merge panel */
+  .merge-panel{display:flex;gap:8px;align-items:center;justify-content: space-between;}
+  .merge-slot{width:72px;height:72px;border-radius:8px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;border:1px dashed rgba(255,255,255,0.03)}
+  .merge-go{background:linear-gradient(90deg,#ff6b6b,#ff8b6b);padding:8px 10px;border-radius:8px;font-weight:700;cursor:pointer}
+  /* tooltip */
+  .tooltip{
+    position:fixed;z-index:var(--tooltip-z);min-width:220px;max-width:360px;padding:10px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6);transform-origin:top left;
+    background:linear-gradient(180deg,rgba(0, 0, 0, 1),rgba(0, 0, 0, 0.9));border:1px solid rgba(255,255,255,0.04);
+    transition:transform .12s,opacity .12s;
+  }
+  .tooltip.hidden{opacity:0;transform:scale(.96);pointer-events:none}
+  .tooltip .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .rarity-band{height:8px;border-radius:6px;margin-bottom:8px}
+  .tooltip .name{font-weight:700}
+  .tooltip .meta{font-size:12px;color:var(--muted)}
+  .tooltip .actions{display:flex;gap:8px;margin-top:8px}
+  .btn{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.03);cursor:pointer;font-weight:600;color:white}
+  .btn.primary{background:linear-gradient(90deg,#6EE7B7,#4ADE80);color:#072018}
+  .btn.warn{background:linear-gradient(90deg,#FFB86B,#FF7A6B);color:#2a0f00}
+  /* settings / modal */
+  .modal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);z-index:2500}
+  .modal .panel{width:90%;max-width:720px}
+
+  /* --- responsive slot sizing --- */
+:root {
+  --slot-size: 64px;       /* desktop slot size */
+  --slot-gap: 8px;
+}
+
+/* reduce slot size on small screens */
+@media (max-width:480px){
+  :root { --slot-size: 48px; --slot-gap:6px; }
+}
+
+/* Inventory layout: 3 columns (top-left inventory spans 2 cols x 2 rows) */
+.inventory-layout {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);   /* 3 columns: left 2 columns = inventory, right col = equipment/buffs */
+  grid-template-rows: auto auto auto;      /* 3 rows */
+  gap: 12px;
+  align-items: start;
+}
+
+/* Inventory occupies top-left 2x2 (cols 1–2, rows 1–2) */
+#inventoryGrid {
+  grid-column: 1 / 3;  /* span columns 1 and 2 */
+  grid-row: 1 / 3;     /* span rows 1 and 2 */
+}
+
+/* Equipment at top-right (column 3, row 1) */
+#equipmentColumn {
+  grid-column: 3 / 4;
+  grid-row: 1 / 2;
+}
+#equipmentColumn .panel { padding:10px; }
+
+/* Buffs at middle-right (column 3, row 2) */
+#buffColumn {
+  grid-column: 3 / 4;
+  grid-row: 2 / 3;
+}
+
+/* Merge occupies bottom row full width */
+#mergeColumn {
+  grid-column: 1 / 4;  /* full width (cols 1..3) */
+  grid-row: 3 / 4;
+}
+
+/* Equipment area grid — keep fixed small tiles but allow shrink on small screens */
+#equipmentArea {
+  display: grid;
+  grid-template-columns: repeat(3, var(--slot-size));
+  grid-template-rows: repeat(2, var(--slot-size));
+  gap: var(--slot-gap);
+  justify-content: start;
+  align-content: start;
+  padding: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+  border-radius: 8px;
+}
+#equipmentArea .equip-slot {
+  width: var(--slot-size);
+  height: var(--slot-size);
+  padding: 4px;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Inventory grid (6x6) uses the var slot size so it scales */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, var(--slot-size));
+  grid-template-rows: repeat(6, var(--slot-size));
+  gap: var(--slot-gap);
+  padding: 8px;
+  background: linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.00));
+  border-radius: 8px;
+  position:relative;
+  overflow: auto;
+}
+
+/* slots & cards scale with slot size */
+.slot {
+  width: var(--slot-size);
+  height: var(--slot-size);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.01);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  transition:box-shadow .12s,transform .12s;
+}
+.slot.empty{border:1px dashed rgba(255,255,255,0.03)}
+.item-card{
+  width: calc(var(--slot-size) - 12px);
+  height: calc(var(--slot-size) - 12px);
+  border-radius:8px;
+  padding:4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  text-align:center;
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+}
+.buff-card{
+  width: calc(var(--slot-size) * 2 + var(--slot-gap));
+  height: calc(var(--slot-size) * 2 + var(--slot-gap));
+  min-width: calc(var(--slot-size) * 2 + var(--slot-gap));
+  min-height: calc(var(--slot-size) * 2 + var(--slot-gap));
+  border-radius:8px;
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+}
+  /* responsive */
+  @media (max-width:980px){
+  main{grid-template-columns:1fr;}
+  .right{order:-1;}
+  .shop-grid{grid-template-columns:repeat(2,1fr);}
+
+  /* collapse inventory layout to a single column stack */
+  .inventory-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+  /* ensure equipment & buff columns occupy the single column */
+  #equipmentColumn, #buffColumn { grid-column: 1 / 2; }
+  /* reduce padding on inventory panel to save vertical space */
+  .inventory-panel { padding:10px; }
+  /* reduce panel font-size slightly for narrow screens */
+  .item-card { font-size:10px; }
+  .buff-card { font-size:11px; }
+  /* make the inventory grid horizontally scrollable if needed */
+  .grid { overflow:auto; -webkit-overflow-scrolling:touch; transform:none; }
+}
+  /* tiny animations for particles */
+  .coin-pop{position:fixed;pointer-events:none;z-index:3000;font-weight:800;font-size:14px;animation:popUp 900ms ease-out}
+  @keyframes popUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(.9)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="panel flexrow">
+    <div class="title">
+      <div>
+        <h1>Idle Inventory</h1>
+        <div class="sub">Incremental • Inventory • Merge • Prestige</div>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <div class="currency chip panel" style="min-width:220px;">
+        <div class="currency-row">
+          <div style="text-align:right">
+            <div class="sub">Coins</div>
+            <div class="big-num" id="coinsDisplay">50</div>
+            <div class="sub" id="cpsDisplay">(+1/sec)</div>
+          </div>
+          <div style="text-align:right">
+            <div class="sub">Gems</div>
+            <div id="gemsDisplay" class="big-num">0</div>
+          </div>
+          <div style="text-align:right">
+            <div class="sub">Prestige</div>
+            <div class="big-num" id="prestigeCount">0</div>
+            <div class="sub" id="prestigeBonus">+0%</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" id="btnSettings">Settings</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="left">
+      <div class="panel inventory-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;gap:8px;align-items:center">
+            <strong>Inventory</strong>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="btnTutorial">Help</button>
+            <button class="btn" id="btnExport">Export</button>
+            <button class="btn" id="btnImport">Import</button>
+          </div>
+        </div>
+
+        <!-- NEW: Inventory layout grid (2x2) -->
+        <div class="inventory-layout" style="margin-top:12px;">
+          <!-- Top-left: Inventory grid -->
+          <div id="inventoryGrid" class="grid" aria-label="Inventory grid" tabindex="0"></div>
+
+          <!-- Top-right: Equipment column -->
+          <div id="equipmentColumn">
+            <div class="panel">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Equipment</strong></div>
+              </div>
+              <div id="equipmentArea" aria-label="Equipment area"></div>
+            </div>
+          </div>
+
+          <!-- Bottom-left: Merge panel -->
+          <div id="mergeColumn">
+            <div class="panel">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div class="sub">Merge</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div class="sub">Enhance: <span id="mergeEnhPct">0%</span></div>
+                  <button class="btn" id="btnClearMerge">Clear</button>
+                </div>
+              </div>
+              <div class="merge-panel" style="margin-top:8px">
+                <div style="display:flex;gap:8px">
+                  <div class="merge-slot panel" data-merge-slot="0"></div>
+                  <div class="merge-slot panel" data-merge-slot="1"></div>
+                  <div class="merge-slot panel" data-merge-slot="2"></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+                  <div class="panel" style="min-width:200px">
+                    <div><strong>Merge Odds</strong></div>
+                    <div style="font-size:13px;color:var(--muted)" id="mergeOdds">60% → avg / 30% → lower / 10% → higher</div>
+                    <div style="font-size:12px;margin-top:6px" id="mergeCost">Enhance cost: —</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <button id="btnEnhance" class="btn primary">Enhance</button>
+                    <button id="btnMerge" class="merge-go">Merge</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom-right: Buff column (3x1 stacked) -->
+          <div id="buffColumn">
+            <div class="panel">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Buffs</strong></div>
+              </div>
+              <div id="buffArea"></div>
+            </div>
+          </div>
+        </div>
+        <!-- END inventory layout -->
+
+      </div>
+    </section>
+
+    <aside class="right">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div><strong>Shop</strong><div class="sub">Auto refresh every 60s</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="sub">Refresh: 10 gems</div>
+            <button class="btn" id="btnRefreshShop">Refresh</button>
+          </div>
+        </div>
+        <div class="shop-grid" id="shopGrid" style="margin-top:8px"></div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong>Prestige</strong><div class="sub" id="prestigeReqLabel">Req: 100,000 coins</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="sub" id="prestigeInfo">Each prestige grants +25% base income.</div>
+            <button class="btn warn" id="btnPrestige">Prestige</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong>History</strong><div class="sub">Last actions</div></div>
+          <div><button class="btn" id="btnClearLog">Clear</button></div>
+        </div>
+        <div id="historyLog" style="margin-top:8px;max-height:200px;overflow:auto;font-size:13px;color:var(--muted)"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Tooltip (shared) -->
+  <div id="tooltip" class="tooltip hidden" role="dialog" aria-hidden="true" tabindex="-1"></div>
+
+  <!-- Settings modal -->
+  <div id="modalSettings" class="modal" style="display:none">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>Settings & Save</strong></div>
+        <div><button class="btn" id="btnCloseSettings">Close</button></div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <div class="sub">RNG Seed</div>
+          <input id="seedInput" style="width:100%;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:#fff" />
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn" id="btnSetSeed">Set Seed</button>
+            <button class="btn" id="btnGenSeed">Generate</button>
+            <button class="btn" id="btnShowSeed">Show/Hide</button>
+          </div>
+          <div class="sub" style="margin-top:8px">Deterministic RNG: <code style="background:rgba(255,255,255,0.02);padding:6px;border-radius:6px" id="seedLabel"></code></div>
+        </div>
+
+        <div style="flex:1;min-width:240px">
+          <div class="sub">Save / Load</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn" id="btnSave">Save Now</button>
+            <button class="btn" id="btnLoad">Load</button>
+            <button class="btn" id="btnReset">Reset</button>
+          </div>
+          <div style="margin-top:8px">
+            <div class="sub">Import / Export JSON</div>
+            <textarea id="saveBox" style="width:100%;height:120px;background:rgba(255,255,255,0.02);color:#fff;border-radius:8px;padding:8px;border:1px solid rgba(255,255,255,0.03)"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" id="btnExportSave">Export</button>
+              <button class="btn" id="btnImportSave">Import</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+        <div class="sub">Max offline hours (0–24)</div>
+        <input id="offlineMax" type="number" value="24" style="width:80px;padding:6px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:#fff" />
+        <div class="sub">Font size</div>
+        <input id="fontSize" type="range" min="12" max="20" value="14" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Tutorial modal -->
+  <div id="modalTutorial" class="modal" style="display:none">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>Help / Tutorial</strong></div>
+        <div><button class="btn" id="btnCloseTutorial">Close</button></div>
+      </div>
+      <div style="margin-top:8px;color:var(--muted);font-size:14px">
+        <p><strong>Basics:</strong> Coins accumulate automatically from base income and equipped items/buffs. Equip items by dragging to equipment slots or using the tooltip actions.</p>
+        <p><strong>Inventory:</strong> 6×6 grid. Buffs are 2×2 and must fit. Drag to move. Touch: long-press to open tooltip or start drag.</p>
+        <p><strong>Shop:</strong> 6 item slots + 3 buff slots. Refreshes every 60s. Buy moves item into your inventory (requires space).</p>
+        <p><strong>Merge:</strong> Place exactly 3 items in merge slots and press Merge. You can buy enhancements to shift outcomes toward a higher-value result.</p>
+        <p><strong>Prestige:</strong> Resets most progress but grants permanent base income increases. Use when you can meet the prestige requirement shown.</p>
+        <p><strong>Tooltips:</strong> Hover (desktop) or tap/long-press (mobile) an item to open an interactive tooltip with Equip / Sell actions. Tooltip uses rarity color accent.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ======================================================================
+   Idle Inventory — Single-file game
+   - All randomness is deterministic and uses the seeded RNG below (mulberry32).
+   - Save data stored in localStorage under key "idle_inventory_save_v1".
+   - All random operations (shop roll, float roll, merge roll, name generation)
+     draw from game.rng() which advances the seed deterministically.
+   - Tooltip system implemented per spec: rarity-colored, interactive,
+     supports hover, long-press, keyboard focus, and does not block drag & drop.
+   ====================================================================== */
+
+/* ==========================
+   Utility / Config
+   ========================== */
+const SAVE_KEY = 'idle_inventory_save_v1';
+const VERSION = '1.0';
+const DEFAULT_SEED = Date.now() & 0xFFFFFFFF;
+const MAX_OFFLINE_HOURS = 24;
+
+function formatCompact(n) {
+  if (n >= 1e18) return (n/1e12).toFixed(2).replace(/\.00$/,'')+'Qi';
+  if (n >= 1e15) return (n/1e12).toFixed(2).replace(/\.00$/,'')+'Qd';
+  if (n >= 1e12) return (n/1e12).toFixed(2).replace(/\.00$/,'')+'T';
+  if (n >= 1e9) return (n/1e9).toFixed(2).replace(/\.00$/,'')+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2).replace(/\.00$/,'')+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(2).replace(/\.00$/,'')+'k';
+  return Math.floor(n).toString();
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function nowTs(){return Date.now();}
+
+/* ==========================
+   Seeded RNG
+   ==========================
+   We'll use mulberry32: small, fast PRNG that is seedable and deterministic.
+   Source (public domain) simple implementation:
+     function mulberry32(a) {
+       return function() {
+         var t = a += 0x6D2B79F5;
+         t = Math.imul(t ^ t >>> 15, t | 1);
+         t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+         return ((t ^ t >>> 14) >>> 0) / 4294967296;
+       }
+     }
+   We'll wrap it to produce numbers and integer ranges and to advance state in game.save.
+   All randomness MUST use game.rng() or game.randomInt() so behavior is repeatable.
+*/
+function createMulberry32(seed){
+  let a = seed >>> 0;
+  return function mulberry32(){
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), t | 61)) >>> 0;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ==========================
+   Rarity definitions (use exact types & hex colors)
+   ========================== */
+const RARITIES = [
+  {id:'Common', color:'#A0A0A0', coinBase:1, basePrice:50, multiplier:1, rate:0.45},
+  {id:'Uncommon', color:'#2ECC71', coinBase:10, basePrice:500, multiplier:2, rate:0.35},
+  {id:'Rare', color:'#3498DB', coinBase:650, basePrice:50000, multiplier:3, rate:0.10},
+  {id:'Epic', color:'#9B59B6', coinBase:10000, basePrice:1000000, multiplier:5, rate:0.05},
+  {id:'Legendary', color:'#F1C40F', coinBase:65000, basePrice:5000000, multiplier:10, rate:0.03},
+  {id:'Mythic', color:'#E74C3C', coinBase:500000, basePrice:100000000, multiplier:20, rate:0.02}
+];
+const RARITY_MAP = Object.fromEntries(RARITIES.map(r=>[r.id,r]));
+
+/* ==========================
+   Name generation (procedural, deterministic)
+   We combine adjectives + nouns + suffix to ensure uniqueness per RNG seed.
+   ========================== */
+const ADJS = ['Shining','Rusty','Ethereal','Ancient','Swift','Cursed','Lucky','Glittering','Vibrant','Sable','Verdant','Crimson','Golden','Silent','Thunder'];
+const NOUNS = ['Blade','Amulet','Coin','Engine','Gear','Relic','Orb','Tome','Ring','Compass','Gizmo','Crystal','Lantern','Crown','Boots'];
+const SUFFIX = ['of Fortune','of Speed','of Wealth','of Insight','of Might','of Luck','of Glory','of the Sea','of Ages','of the Sun'];
+
+/* ==========================
+   Game state and methods
+   ========================== */
+const game = {
+  // persistent state
+  save: {
+    version: VERSION,
+    coins: 500,
+    baseIncome: 1,         // base coins/sec before prestige
+    gems: 0,
+    inventory: [],         // array of item objects with positions or null
+    equipment: [null, null, null, null, null, null], // 6 equip slots
+    buffsEquipped: [null, null, null], // 3 buff slots
+    buffInventory: [],     // stored buff items in inventory
+    shopSeed: null,
+    shopContents: [],
+    prestigeCount: 0,
+    prestigeBonusPct: 0,   // e.g., 5 for +5%
+    rngSeed: DEFAULT_SEED,
+    rngState: null,        // not used: we'll store seed and advance deterministically
+    lastTimestamp: nowTs(),
+    logs: [],
+    settings: {
+      showSeed: true,
+      offlineMaxHours: 24,
+      fontSize: 14
+    }
+  },
+
+  // transient/runtime
+  rng: null,   // function() -> [0,1)
+  rngSeed: DEFAULT_SEED,
+  tickInterval: null,
+  shopTimer: 60,
+  shopTimerRemaining: 60,
+  mergeSlots: [null,null,null],
+  mergeEnhPct: 0,
+  lastMergeResult: null,
+  tooltipTarget: null,
+  dragging: null, // {item,source,type,originIndex}
+  saveThrottle: 0,
+  logLimit: 200,
+};
+
+/* ---------------------------
+   RNG helpers
+   --------------------------- */
+function initRng(seed){
+  game.rngSeed = seed >>> 0;
+  game.rng = createMulberry32(game.rngSeed);
+}
+/* Draw a uniform float in [0,1) */
+function rng(){
+  if (!game.rng) initRng(game.rngSeed);
+  const v = game.rng();
+  // To make RNG deterministic across saves/load, we also advance the seed count:
+  // We'll update rngSeed by mixing one step value (not strictly necessary but allows saving current seed)
+  // For simplicity we reconstruct the PRNG with same seed on load and rely on save.rngSeed to store starting seed.
+  return v;
+}
+function randomFloat(min, max){ return min + rng() * (max - min); }
+function randomInt(min, maxInclusive){ return Math.floor(min + rng()*(maxInclusive - min + 1)); }
+function choice(arr){ return arr[Math.floor(rng()*arr.length)]; }
+
+/* ==========================
+   Item & Buff model
+   ==========================
+   Item schema:
+   {
+     id: unique string,
+     name, description,
+     rarity: 'Common'...'Mythic',
+     float: 0.0-10.0 (decimal),
+     buyPrice: int,
+     sellPrice: int,
+     coinPerSec: float (calculated),
+     inventorySize: {w:1,h:1} or {w:2,h:2} for buffs,
+     type: 'item'|'buff',
+     createdFromMerge: boolean
+   }
+*/
+function createItemFromRarity(rarityName){
+  // Deterministic name + float + prices from RNG
+  const rarity = RARITY_MAP[rarityName];
+  const adj = ADJS[Math.floor(rng()*ADJS.length)];
+  const noun = NOUNS[Math.floor(rng()*NOUNS.length)];
+  const suf = SUFFIX[Math.floor(rng()*SUFFIX.length)];
+  const name = `${adj} ${noun} ${suf}`;
+  const desc = `${rarityName} item. ${adj} ${noun} imbued with mysterious potential.`;
+  const f = Number((randomFloat(0,10)).toFixed(2));
+  const floatMult = 1 + (f/10) * 9; // m = 1 + (f/10)*9 => 1..10
+  const buyPrice = Math.max(1, Math.round(rarity.basePrice * rarity.multiplier * floatMult));
+  const sellPrice = Math.floor(buyPrice * 0.5);
+  const coinPerSec = rarity.coinBase * rarity.multiplier * floatMult;
+  return {
+    id: 'it-'+Date.now().toString(36)+'-'+Math.floor(rng()*1e6).toString(36),
+    name, description: desc, rarity: rarityName, float: f,
+    buyPrice, sellPrice, coinPerSec, inventorySize:{w:1,h:1}, type:'item', createdFromMerge:false
+  };
+}
+function createBuffOfRarity(rarityName){
+  // Buffs occupy 2x2 and provide effects. We'll produce a few buff templates to pick from.
+  const rarity = RARITY_MAP[rarityName];
+  const templates = [
+    {id:'coin_mult', name:'Coin Multiplier', desc:'Increases coin gain by a percentage.', baseEffect:0.10},
+    {id:'item_eff', name:'Item Efficiency', desc:'Items produce more coin/s (float effectiveness).', baseEffect:0.08},
+    {id:'merge_bonus', name:'Merge Bonus', desc:'Increases chance for better merge outcomes.', baseEffect:0.05},
+    {id:'prestige_boost', name:'Prestige Boost', desc:'Increases prestige base income bonus.', baseEffect:0.02}
+  ];
+  const t = templates[Math.floor(rng()*templates.length)];
+  // scale effect by rarity multiplier: stronger buff for higher rarity
+  const effect = +(t.baseEffect * rarity.multiplier).toFixed(3);
+  const name = `${t.name} (${rarityName})`;
+  const desc = `${t.desc} Effect: +${Math.round(effect*100)}% (scaled by rarity).`;
+  const f = Number((randomFloat(0,10)).toFixed(2));
+  const floatMult = 1 + (f/10) * 9;
+  const buyPrice = Math.max(1, Math.round(rarity.basePrice * rarity.multiplier * floatMult * 0.8));
+  const sellPrice = Math.floor(buyPrice * 0.5);
+  return {
+    id: 'bf-'+Date.now().toString(36)+'-'+Math.floor(rng()*1e6).toString(36),
+    name, description: desc, rarity:rarityName, float: f,
+    buyPrice, sellPrice, inventorySize:{w:2,h:2}, type:'buff',
+    buffType: t.id, effectValue: effect, createdFromMerge:false
+  };
+}
+
+/* ==========================
+   Shop generation (deterministic from seed)
+   ========================== */
+function generateShop(seed){
+  // For deterministic behavior, set a local PRNG seeded from (seed)
+  // We'll not implement a separate PRNG constructor here; instead we will mix the global RNG deterministically
+  // The game's global RNG is seeded from game.save.rngSeed. To generate shop contents reproducibly,
+  // we record shopSeed in save and then, on load, re-seed temp RNG from (game.save.rngSeed ^ shopSeed)
+  const shop = [];
+  // 6 items
+  for(let i=0;i<6;i++){
+    const r = weightedRarityRoll();
+    shop.push({type:'item', rarity:r, preview:createItemFromRarity(r)});
+  }
+  // 3 buffs
+  for(let i=0;i<3;i++){
+    const r = weightedRarityRoll();
+    shop.push({type:'buff', rarity:r, preview:createBuffOfRarity(r)});
+  }
+  return shop;
+}
+
+/* Weighted rarity roll using specified rates (deterministic via game.rng()) */
+function weightedRarityRoll(){
+  const r = rng();
+  let acc = 0;
+  for (const entry of RARITIES){
+    acc += entry.rate;
+    if (r < acc) return entry.id;
+  }
+  return RARITIES[RARITIES.length-1].id;
+}
+
+/* ==========================
+   Inventory management helpers (6x6)
+   Inventory stored as array of 36 slots, each null or item reference (top-left for 2x2)
+   For 2x2, we mark spanning slots with placeholder {refId: id, span:true}
+   ========================== */
+function createEmptyInventoryGrid(){
+  const grid = Array(36).fill(null);
+  return grid;
+}
+function indexFromXY(x,y){ return y*6 + x; }
+function xyFromIndex(i){ return {x: i%6, y: Math.floor(i/6)}; }
+
+/* Checks if an item of size w*h can be placed at inventory x,y (0-based). Returns true if fits and no collisions. */
+function canPlaceInInventory(grid, item, x, y){
+  const w = item.inventorySize.w, h = item.inventorySize.h;
+  if (x + w > 6 || y + h > 6) return false;
+  for(let dy=0;dy<h;dy++){
+    for(let dx=0;dx<w;dx++){
+      const idx = indexFromXY(x+dx,y+dy);
+      if (grid[idx] !== null) return false;
+    }
+  }
+  return true;
+}
+/* Place returns the modified grid and sets top-left to item object and other cells to a placeholder pointing to it */
+function placeInInventory(grid, item, x, y){
+  const w = item.inventorySize.w, h = item.inventorySize.h;
+  const newGrid = grid;
+  newGrid[indexFromXY(x,y)] = item;
+  for(let dy=0;dy<h;dy++){
+    for(let dx=0;dx<w;dx++){
+      if (dx===0 && dy===0) continue;
+      newGrid[indexFromXY(x+dx,y+dy)] = {span:true, topLeft:indexFromXY(x,y)};
+    }
+  }
+  return newGrid;
+}
+/* Remove item at index; frees up its occupied cells. */
+function removeFromInventory(grid, idx){
+  const slot = grid[idx];
+  if (!slot) return grid;
+  if (slot.span && slot.topLeft !== undefined) {
+    // shouldn't happen as we always store topLeft as item
+    const top = slot.topLeft;
+    return removeFromInventory(grid, top);
+  }
+  const item = slot;
+  const w = item.inventorySize.w, h = item.inventorySize.h;
+  const topIdx = idx;
+  const pos = xyFromIndex(topIdx);
+  for(let dy=0;dy<h;dy++){
+    for(let dx=0;dx<w;dx++){
+      const i = indexFromXY(pos.x + dx, pos.y + dy);
+      grid[i] = null;
+    }
+  }
+  return grid;
+}
+
+function removeDraggedSource(drag){
+  if (!drag) return;
+  if (drag.source === 'inventory'){
+    removeFromInventory(game.save.inventory, drag.index);
+  } else if (drag.source === 'equipment'){
+    game.save.equipment[drag.index] = null;
+  } else if (drag.source === 'buff-equip'){
+    game.save.buffsEquipped[drag.index] = null;
+  } else if (drag.source === 'merge'){
+    // **important**: clear merge slot so we don't keep the item there and create a duplicate
+    game.mergeSlots[drag.index] = null;
+  }
+}
+
+/* Find first empty placement spot for item, return {x,y} or null */
+function findFirstFit(grid, item){
+  for(let y=0;y<6;y++){
+    for(let x=0;x<6;x++){
+      if (canPlaceInInventory(grid,item,x,y)) return {x,y};
+    }
+  }
+  return null;
+}
+
+/* ==========================
+   Game initialization & save/load
+   ========================== */
+function initGame(){
+  // load from localStorage or use defaults
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw){
+    try {
+      const parsed = JSON.parse(raw);
+      // Basic migration & safety checks
+      game.save = Object.assign(game.save, parsed);
+    } catch(e){ console.warn("Failed to parse save; starting fresh."); }
+  } else {
+    // first time setup
+    game.save.inventory = createEmptyInventoryGrid();
+    game.save.rngSeed = DEFAULT_SEED;
+    game.save.shopSeed = Math.floor(Math.random()*1e9);
+    initRng(game.save.rngSeed);
+    game.save.shopContents = generateShop(game.save.shopSeed);
+    game.save.lastTimestamp = nowTs();
+    saveGame();
+  }
+  // Ensure inventory exists
+  if (!game.save.inventory || game.save.inventory.length !== 36) game.save.inventory = createEmptyInventoryGrid();
+  // initialize RNG
+  initRng(game.save.rngSeed);
+  // create shop if missing
+  if (!game.save.shopContents || game.save.shopContents.length < 9) {
+    game.save.shopSeed = Math.floor(rng()*1e9);
+    game.save.shopContents = generateShop(game.save.shopSeed);
+  }
+  // ensure equipment length 6
+  if (!game.save.equipment || game.save.equipment.length !== 6) game.save.equipment = [null,null,null,null,null,null];
+  // buff slots
+  if (!game.save.buffsEquipped || game.save.buffsEquipped.length !== 3) game.save.buffsEquipped = [null,null,null];
+  if (!game.save.logs) game.save.logs = [];
+  // apply UI settings
+  applySettingsToUI();
+  // offline progress calc
+  handleOfflineProgress();
+  // start ticking
+  startTick();
+  // render UI
+  renderAll();
+}
+
+/* Save function */
+function saveGame(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(game.save));
+  } catch(e){
+    console.error("Failed to save:",e);
+  }
+}
+
+/* Quick push to logs */
+function pushLog(msg){
+  game.save.logs.unshift(`[${(new Date()).toLocaleString()}] ${msg}`);
+  if (game.save.logs.length > game.logLimit) game.save.logs.length = game.logLimit;
+  renderLogs();
+  saveGame();
+}
+
+/* ==========================
+   Offline progression
+   - When loading, calculate time delta from lastTimestamp and credit coins deterministically up to max hours
+   ========================== */
+function handleOfflineProgress(){
+  const now = nowTs();
+  const elapsedMs = now - (game.save.lastTimestamp || now);
+  const maxMs = (game.save.settings?.offlineMaxHours ?? MAX_OFFLINE_HOURS) * 3600000;
+  const encapped = Math.min(elapsedMs, maxMs);
+  const seconds = Math.floor(encapped / 1000);
+  if (seconds > 0){
+    const incomePerSec = calculateTotalCPS();
+    const earned = incomePerSec * seconds;
+    game.save.coins += earned;
+    pushLog(`Offline earn: ${formatCompact(earned)} coins over ${seconds} seconds.`);
+  }
+  game.save.lastTimestamp = now;
+  saveGame();
+}
+
+/* ==========================
+   Income calculations
+   - Base income increases via prestige (prestigeBonusPct)
+   - Equipment items add coinPerSec
+   - Buffs add multipliers
+   ========================== */
+function calculateBaseIncome(){
+  const base = game.save.baseIncome;
+  const multi = 1 + (game.save.prestigeBonusPct / 100);
+  return base * multi;
+}
+function calculateEquipmentIncome(){
+  let total = 0;
+  for(const it of game.save.equipment){
+    if (it && it.coinPerSec) total += it.coinPerSec;
+  }
+  return total;
+}
+function calculateBuffModifiers(){
+  // Return multiplier for coins and item efficiency increase
+  let coinMult = 1;
+  let itemEfficiency = 1;
+  for(const bf of game.save.buffsEquipped){
+    if (!bf) continue;
+    const val = bf.effectValue || 0;
+    if (bf.buffType === 'coin_mult') coinMult += val;
+    if (bf.buffType === 'item_eff') itemEfficiency += val;
+    if (bf.buffType === 'merge_bonus') {/* handled in merge */ }
+    if (bf.buffType === 'prestige_boost') {/* apply to prestige calculation */ }
+  }
+  return {coinMult, itemEfficiency};
+}
+function calculateTotalCPS(){
+  const base = calculateBaseIncome();
+  const equip = calculateEquipmentIncome();
+  const buffs = calculateBuffModifiers();
+  // Items' coinPerSec may be amplified by itemEfficiency
+  const itemEffMultiplier = buffs.itemEfficiency;
+  const total = (base + equip * itemEffMultiplier) * buffs.coinMult;
+  return total;
+}
+
+/* Tick: run every second to add coins */
+function startTick(){
+  if (game.tickInterval) clearInterval(game.tickInterval);
+  game.tickInterval = setInterval(()=>{
+    const cps = calculateTotalCPS();
+    game.save.coins += cps;
+    game.save.lastTimestamp = nowTs();
+    updateDisplays();
+    // small save occasionally
+    if (Math.random() < 0.05) saveGame();
+  }, 1000);
+  // start shop timer
+  game.shopTimerRemaining = game.shopTimer;
+  setInterval(()=> {
+    game.shopTimerRemaining--;
+    if (game.shopTimerRemaining <= 0){
+      refreshShopAuto();
+      game.shopTimerRemaining = game.shopTimer;
+    }
+    renderShopTimer();
+  }, 1000);
+}
+
+function rarityTagClass(rarity) {
+  if (rarity === 'Epic') return 'rarity-epic';
+  if (rarity === 'Legendary') return 'rarity-legendary';
+  if (rarity === 'Mythic') return 'rarity-mythic';
+  return '';
+}
+
+
+/* ==========================
+   Shop & Buying
+   ========================== */
+function renderShop(){
+  const container = document.getElementById('shopGrid');
+  container.innerHTML = '';
+  // shopContents: first 6 are items, last 3 are buffs (as generated earlier)
+  for(let i=0;i<9;i++){
+    const slot = document.createElement('div');
+    slot.className = 'shop-item';
+    const sc = game.save.shopContents[i];
+    const left = document.createElement('div');
+    left.className = 'left';
+    const title = document.createElement('div');
+    title.style.display = 'flex';
+    title.style.gap = '8px';
+    const colorBand = document.createElement('div');
+    colorBand.style.width='10px'; colorBand.style.height='30px'; colorBand.style.borderRadius='6px';
+    colorBand.style.background = RARITY_MAP[sc.rarity].color;
+    const name = document.createElement('div');
+    name.innerHTML = `
+    <div style="font-weight:700">${sc.preview.name}</div>
+    <div
+        class="rarity-tag ${rarityTagClass(sc.rarity)}"
+        style="color:${RARITY_MAP[sc.rarity].color}"
+    >
+        ${sc.rarity}
+    </div>
+    `;
+
+        title.appendChild(colorBand); title.appendChild(name);
+    left.appendChild(title);
+    slot.appendChild(left);
+    const buy = document.createElement('div');
+    buy.className = 'shop-buy';
+    buy.innerText = formatCompact(sc.preview.buyPrice || sc.preview.buyPrice);
+    buy.onclick = ()=> {
+      purchaseShopItem(i);
+    };
+    slot.appendChild(buy);
+    container.appendChild(slot);
+  }
+}
+function renderShopTimer(){
+  // Could show remaining seconds but omitted for compactness
+}
+function refreshShopAuto(){
+  // re-generate shop deterministically using saved shopSeed and global RNG
+  game.save.shopSeed = Math.floor(rng()*1e9);
+  game.save.shopContents = generateShop(game.save.shopSeed);
+  pushLog('Shop auto-refreshed.');
+  renderShop();
+  saveGame();
+}
+function manualRefreshShop(){
+  if (game.save.gems < 10) { alert('Need 10 gems to manual refresh.'); return; }
+  game.save.gems -= 10;
+  game.save.shopSeed = Math.floor(rng()*1e9);
+  game.save.shopContents = generateShop(game.save.shopSeed);
+  pushLog('Shop manually refreshed (-10 gems).');
+  renderShop();
+  saveGame();
+}
+function purchaseShopItem(index){
+  const sc = game.save.shopContents[index];
+  if (!sc) return;
+  const item = sc.preview;
+  // validate inventory space
+  const grid = game.save.inventory;
+  const fit = findFirstFit(grid, item);
+  if (!fit){
+    alert('Not enough space in inventory. Clear some space or move items.');
+    return;
+  }
+  // deduct price
+  if (game.save.coins < item.buyPrice){ alert('Not enough coins.'); return; }
+  game.save.coins -= item.buyPrice;
+  // place item
+  placeInInventory(game.save.inventory, item, fit.x, fit.y);
+  pushLog(`Bought ${item.name} (${item.rarity}) for ${formatCompact(item.buyPrice)} coins.`);
+  // replace shop slot
+  game.save.shopContents[index] = {type:sc.type, rarity: weightedRarityRoll(), preview: (sc.type==='item'? createItemFromRarity(weightedRarityRoll()) : createBuffOfRarity(weightedRarityRoll()))};
+  renderAll();
+  saveGame();
+}
+
+/* ==========================
+   Rendering functions
+   ========================== */
+function renderAll(){
+  renderInventory();
+  renderEquipment();
+  renderBuffArea();
+  renderShop();
+  updateDisplays();
+  renderMergePanel();
+  renderLogs();
+}
+function updateDisplays(){
+  document.getElementById('coinsDisplay').innerText = formatCompact(Math.floor(game.save.coins));
+  document.getElementById('gemsDisplay').innerText = formatCompact(game.save.gems);
+  const cps = calculateTotalCPS();
+  document.getElementById('cpsDisplay').innerText = `+${formatCompact(cps.toFixed(2))}/sec`;
+  document.getElementById('prestigeCount').innerText = game.save.prestigeCount;
+  document.getElementById('prestigeBonus').innerText = `+${game.save.prestigeBonusPct}%`;
+  document.getElementById('prestigeReqLabel').innerText = `Req: ${formatCompact(getPrestigeRequirement())} coins`;
+}
+function renderInventory(){
+  const container = document.getElementById('inventoryGrid');
+  container.innerHTML = '';
+  const grid = game.save.inventory;
+  for(let i=0;i<36;i++){
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.dataset.index = i;
+    const cell = grid[i];
+    if (cell === null){
+      slot.classList.add('empty');
+      slot.addEventListener('click', ()=> onInventorySlotClick(i));
+    } else if (cell.span){
+      // placeholder
+      slot.dataset.spanned = true;
+    } else {
+      // item or buff
+      const card = document.createElement('div');
+      card.className = cell.inventorySize.w === 2 ? 'buff-card' : 'item-card';
+      card.style.background = `linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.00))`;
+      card.style.border = `2px solid ${RARITY_MAP[cell.rarity].color}`;
+      card.innerHTML = `
+        <div class="item-name">${cell.name.split(' ')[0]}</div>
+        <div style="color:${RARITY_MAP[cell.rarity].color}">
+            ${cell.rarity}
+        </div>
+        `;
+
+      // drag handlers
+      card.draggable = true;
+      card.addEventListener('dragstart', (e)=> startDragFromInventory(e, i));
+      // touch: long-press for tooltip or drag
+      addTouchDragAndTooltip(card, cell, i, 'inventory');
+      // keyboard focus
+      card.tabIndex = 0;
+      card.addEventListener('keydown', (e)=> keyboardItemAction(e, cell, i, 'inventory'));
+      // click => inspect / tooltip
+      card.addEventListener('click', ()=> showTooltipForItem(cell, {source:'inventory', index:i, element:card}));
+      slot.appendChild(card);
+    }
+    // slot dragover and drop
+    slot.addEventListener('dragover', (e)=> {
+      e.preventDefault();
+      const dragging = game.dragging;
+      if (!dragging) return;
+      // Occupancy validation highlight
+      const targetIdx = parseInt(slot.dataset.index);
+      highlightInventoryPlacement(targetIdx, dragging.item);
+    });
+    slot.addEventListener('dragleave', ()=> clearInventoryHighlights());
+    slot.addEventListener('drop', (e)=> {
+      e.preventDefault();
+      clearInventoryHighlights();
+      const targetIdx = parseInt(slot.dataset.index);
+      if (!game.dragging) return;
+      // Determine drop XY from targetIdx
+      const pos = xyFromIndex(targetIdx);
+      attemptPlaceDraggedItemToInventory(game.dragging, pos.x, pos.y);
+    });
+    container.appendChild(slot);
+  }
+}
+/* highlight candidate placement for item when dragging over index */
+function highlightInventoryPlacement(targetIdx, item){
+  clearInventoryHighlights();
+  const pos = xyFromIndex(targetIdx);
+  for(let y=0;y<6;y++){
+    for(let x=0;x<6;x++){
+      // for each grid cell we compute whether dropping at pos.x,pos.y can succeed; but to keep responsive, we just test the attempted target pos
+    }
+  }
+  const container = document.getElementById('inventoryGrid');
+  const slots = container.querySelectorAll('.slot');
+  if (canPlaceInInventory(game.save.inventory, item, pos.x, pos.y)){
+    // highlight occupied region green
+    for(let dy=0;dy<item.inventorySize.h;dy++){
+      for(let dx=0;dx<item.inventorySize.w;dx++){
+        const idx = indexFromXY(pos.x+dx,pos.y+dy);
+        if (idx>=0 && idx<36) slots[idx].classList.add('highlight-ok');
+      }
+    }
+  } else {
+    // highlight single slot red
+    slots[targetIdx].classList.add('highlight-bad');
+  }
+}
+function clearInventoryHighlights(){
+  const container = document.getElementById('inventoryGrid');
+  container.querySelectorAll('.slot').forEach(s=> s.classList.remove('highlight-ok','highlight-bad'));
+}
+
+/* Equipment area render */
+function renderEquipment(){
+  const area = document.getElementById('equipmentArea');
+  area.innerHTML = '';
+  for(let i=0;i<6;i++){
+    const slot = document.createElement('div');
+    slot.className = 'equip-slot panel';
+    slot.dataset.equipIndex = i;
+    const it = game.save.equipment[i];
+    if (it){
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.style.border = `2px solid ${RARITY_MAP[it.rarity].color}`;
+      card.innerHTML = `<div style="font-weight:700">${it.name.split(' ')[0]}</div><div style="font-size:12px;color:${RARITY_MAP[it.rarity].color}">${formatCompact(it.coinPerSec.toFixed(0))}/s</div>`;
+      card.draggable = true;
+      card.addEventListener('dragstart', (e)=> startDragFromEquipment(e, i));
+      addTouchDragAndTooltip(card, it, i, 'equipment');
+      card.tabIndex = 0;
+      slot.appendChild(card);
+    } else {
+      slot.innerHTML = `<div style="font-size:12px;color:var(--muted)">Empty</div>`;
+    }
+    // allow drop to equip
+    slot.addEventListener('dragover', (e)=> {
+      e.preventDefault();
+      const dragging = game.dragging;
+      if (!dragging) return;
+      // we only accept 1x1 items
+      const idx = parseInt(slot.dataset.equipIndex);
+      if (dragging.item.inventorySize.w===1 && dragging.item.inventorySize.h===1) {
+        slot.classList.add('highlight-ok');
+      } else slot.classList.add('highlight-bad');
+    });
+    slot.addEventListener('dragleave', ()=> slot.classList.remove('highlight-ok','highlight-bad'));
+    slot.addEventListener('drop', (e)=> {
+      e.preventDefault();
+      slot.classList.remove('highlight-ok','highlight-bad');
+      if (!game.dragging) return;
+      const idx = parseInt(slot.dataset.equipIndex);
+      attemptEquipDraggedItem(game.dragging, idx);
+    });
+    area.appendChild(slot);
+  }
+}
+
+/* Buff area render */
+function renderBuffArea(){
+  const area = document.getElementById('buffArea');
+  area.innerHTML = '';
+  for(let i=0;i<3;i++){
+    const slot = document.createElement('div');
+    slot.className = 'buff-slot panel';
+    slot.dataset.buffIndex = i;
+    const bf = game.save.buffsEquipped[i];
+    if (bf){
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.style.border = `2px solid ${RARITY_MAP[bf.rarity].color}`;
+      card.style.width = '120px';
+      card.style.height = '44px';
+      card.innerHTML = `<div style="font-weight:700">${bf.name.split(' ')[0]}</div><div style="font-size:12px">${bf.buffType}</div>`;
+      card.draggable = true;
+      card.addEventListener('dragstart', (e)=> startDragFromBuffEquip(e, i));
+      addTouchDragAndTooltip(card, bf, i, 'buff-equip');
+      card.tabIndex = 0;
+      slot.appendChild(card);
+    } else {
+      slot.innerHTML = `<div style="font-size:12px;color:var(--muted)">Empty</div>`;
+    }
+    // drop handling: accept 2x2 buffs
+    slot.addEventListener('dragover', (e)=> {
+      e.preventDefault();
+      const dragging = game.dragging;
+      if (!dragging) return;
+      if (dragging.item.inventorySize.w===2 && dragging.item.inventorySize.h===2) slot.classList.add('highlight-ok'); else slot.classList.add('highlight-bad');
+    });
+    slot.addEventListener('dragleave', ()=> slot.classList.remove('highlight-ok','highlight-bad'));
+    slot.addEventListener('drop', (e)=> {
+      e.preventDefault();
+      slot.classList.remove('highlight-ok','highlight-bad');
+      if (!game.dragging) return;
+      const idx = parseInt(slot.dataset.buffIndex);
+      attemptEquipBuffDraggedItem(game.dragging, idx);
+    });
+    area.appendChild(slot);
+  }
+}
+
+/* ----------------------------
+   New: merge-slot drag/drop helpers
+   ---------------------------- */
+
+/* Allow starting a drag from a merge slot so items can be dragged out */
+function startDragFromMergeSlot(e, mergeIndex){
+  const item = game.mergeSlots[mergeIndex];
+  if (!item) return;
+  game.dragging = { item, source: 'merge', index: mergeIndex };
+  e.dataTransfer?.setData('text/plain', JSON.stringify({ source:'merge', index: mergeIndex }));
+}
+
+/* Attempt to add the dragged item into a merge slot (from inventory/equipment/buffs/other merge slot) */
+function attemptAddToMergeSlot(drag, mergeSlotIdx){
+  const item = drag.item;
+  if (!item) return;
+  // only 1x1 items should be allowed in merge slots
+  if (item.inventorySize.w !== 1 || item.inventorySize.h !== 1){
+    alert('Only 1×1 items can be placed into merge slots.');
+    game.dragging = null;
+    return;
+  }
+  if (game.mergeSlots[mergeSlotIdx]) {
+    alert('Merge slot occupied.');
+    game.dragging = null;
+    return;
+  }
+
+  // remove from source
+  removeDraggedSource(drag);
+
+  game.mergeSlots[mergeSlotIdx] = item;
+  pushLog(`Placed ${item.name} into merge slot ${mergeSlotIdx + 1}.`);
+  game.dragging = null;
+  renderAll();
+  saveGame();
+}
+
+/* ----------------------------
+   Small change: let inventory drops handle items coming FROM merge slots
+   (extend existing attemptPlaceDraggedItemToInventory)
+   ---------------------------- */
+function attemptPlaceDraggedItemToInventory(drag, x, y){
+  const item = drag.item;
+  if (!canPlaceInInventory(game.save.inventory, item, x, y)){
+    alert('Cannot place item there.');
+    game.dragging = null;
+    return;
+  }
+  // remove from source
+  removeDraggedSource(drag);
+
+  // place into target
+  placeInInventory(game.save.inventory, item, x, y);
+  game.dragging = null;
+  pushLog(`Moved ${item.name} to inventory.`);
+  renderAll();
+  saveGame();
+}
+
+/* ----------------------------
+   Replace / update renderMergePanel so:
+   - cards placed in merge slots are draggable
+   - merge slot elements accept dragover/drop
+   ---------------------------- */
+function renderMergePanel(){
+  for(let i=0;i<3;i++){
+    const el = document.querySelector(`.merge-slot[data-merge-slot="${i}"]`);
+    el.innerHTML = '';
+    const it = game.mergeSlots[i];
+    if (it){
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.style.border = `2px solid ${RARITY_MAP[it.rarity].color}`;
+      card.innerHTML = `<div style="font-weight:700">${it.name.split(' ')[0]}</div><div style="font-size:12px">${it.rarity}</div>`;
+      // make merge-slot item draggable so player can drag it out
+      card.draggable = true;
+      card.addEventListener('dragstart', (e)=> startDragFromMergeSlot(e, i));
+      // touch/tooltip integration (reuse existing helper)
+      addTouchDragAndTooltip(card, it, i, 'merge');
+      // allow keyboard focus if desired
+      card.tabIndex = 0;
+      el.appendChild(card);
+    } else {
+      // keep the slot empty
+    }
+
+    // allow dropping into merge slot
+    el.addEventListener('dragover', (e)=> {
+      e.preventDefault();
+      const dragging = game.dragging;
+      if (!dragging) return;
+      // only allow 1x1 items into merge slots
+      if (dragging.item && dragging.item.inventorySize && dragging.item.inventorySize.w === 1 && dragging.item.inventorySize.h === 1) {
+        el.classList.add('highlight-ok');
+      } else {
+        el.classList.add('highlight-bad');
+      }
+    });
+    el.addEventListener('dragleave', ()=> {
+      el.classList.remove('highlight-ok','highlight-bad');
+    });
+    el.addEventListener('drop', (e)=> {
+      e.preventDefault();
+      el.classList.remove('highlight-ok','highlight-bad');
+      if (!game.dragging) return;
+      attemptAddToMergeSlot(game.dragging, i);
+    });
+  }
+
+  // update merge odds display (base 60/30/10)
+  const base = [60,30,10];
+  const enhanced = game.mergeEnhPct;
+  const high = clamp(base[2] + enhanced, 0, 100);
+  const remaining = 100 - high;
+  const low = Math.round(remaining * (base[1]/(base[0]+base[1])));
+  const mid = remaining - low;
+  document.getElementById('mergeOdds').innerText = `${mid}% → avg / ${low}% → lower / ${high}% → higher`;
+  // compute enhancement cost (150% of average price)
+  const avg = getMergeAveragePrice();
+  const cost = Math.round(avg * 1.5 * ((game.mergeEnhPct/10)+1)); // each enhancement step increases cost a bit
+  document.getElementById('mergeCost').innerText = `Enhance cost (approx): ${formatCompact(cost)} coins`;
+  document.getElementById('mergeEnhPct').innerText = `${game.mergeEnhPct}%`;
+}
+
+
+/* Logs */
+function renderLogs(){
+  const el = document.getElementById('historyLog');
+  el.innerHTML = '';
+  for(const l of game.save.logs.slice(0,20)){
+    const d = document.createElement('div');
+    d.innerText = l;
+    el.appendChild(d);
+  }
+}
+
+/* ==========================
+   Drag & Drop handlers
+   ========================== */
+
+function startDragFromInventory(e, index){
+  const item = game.save.inventory[index];
+  if (!item || item.span) return;
+  game.dragging = {item, source:'inventory', index};
+  e.dataTransfer?.setData('text/plain', JSON.stringify({source:'inventory',index}));
+}
+function startDragFromEquipment(e, index){
+  const item = game.save.equipment[index];
+  if (!item) return;
+  game.dragging = {item, source:'equipment', index};
+  e.dataTransfer?.setData('text/plain', JSON.stringify({source:'equipment',index}));
+}
+function startDragFromBuffEquip(e, index){
+  const item = game.save.buffsEquipped[index];
+  if (!item) return;
+  game.dragging = {item, source:'buff-equip', index};
+  e.dataTransfer?.setData('text/plain', JSON.stringify({source:'buff-equip',index}));
+}
+
+/* Attempt to place dragged item into inventory at x,y */
+function attemptPlaceDraggedItemToInventory(drag, x, y){
+  const item = drag.item;
+  if (!canPlaceInInventory(game.save.inventory, item, x, y)){
+    alert('Cannot place item there.');
+    game.dragging = null;
+    return;
+  }
+  // remove from source
+  removeDraggedSource(drag);
+  // place into target
+  placeInInventory(game.save.inventory, item, x, y);
+  game.dragging = null;
+  pushLog(`Moved ${item.name} to inventory.`);
+  renderAll();
+  saveGame();
+}
+
+/* Attempt to equip a dragged item into equipment slot index */
+function attemptEquipDraggedItem(drag, slotIndex){
+  const item = drag.item;
+  if (item.inventorySize.w !== 1 || item.inventorySize.h !== 1){
+    alert('Only 1×1 items can be equipped into equipment slots.');
+    game.dragging = null;
+    return;
+  }
+  // if equipment slot occupied, swap into inventory if possible
+  const occupying = game.save.equipment[slotIndex];
+  // remove source
+  removeDraggedSource(drag);
+
+  // place item into equipment
+  game.save.equipment[slotIndex] = item;
+  // if there was occupying item, place it back into inventory if space else drop it into first free spot
+  if (occupying){
+    const spot = findFirstFit(game.save.inventory, occupying);
+    if (spot) placeInInventory(game.save.inventory, occupying, spot.x, spot.y); else {
+      // if no inventory space, try to put it back into the original slot if inventory move came from equip (swap) - but for simplicity, place into equipment slot we vacated
+      // if no space, revert operation
+      alert('No space to swap out existing equipment; action canceled.');
+      // rollback
+      if (drag.source === 'inventory'){
+        // put dragged item back to inventory in same spot
+        placeInInventory(game.save.inventory, item, xyFromIndex(drag.index).x, xyFromIndex(drag.index).y);
+      } else if (drag.source === 'equipment'){
+        game.save.equipment[drag.index] = item;
+      } else if (drag.source === 'buff-equip'){
+        game.save.buffsEquipped[drag.index] = item;
+      }
+      return;
+    }
+  }
+  pushLog(`Equipped ${item.name} to slot ${slotIndex+1}.`);
+  game.dragging = null;
+  renderAll();
+  saveGame();
+}
+
+/* Attempt to equip a buff into buff slot */
+function attemptEquipBuffDraggedItem(drag, slotIndex){
+  const item = drag.item;
+  if (item.inventorySize.w !== 2 || item.inventorySize.h !== 2){
+    alert('Only 2×2 buffs can be placed into buff slots.');
+    game.dragging = null;
+    return;
+  }
+  const occupying = game.save.buffsEquipped[slotIndex];
+  // remove from source
+  removeDraggedSource(drag);
+
+  // place buff
+  game.save.buffsEquipped[slotIndex] = item;
+  // return occupying to inventory
+  if (occupying){
+    const spot = findFirstFit(game.save.inventory, occupying);
+    if (spot) placeInInventory(game.save.inventory, occupying, spot.x, spot.y);
+    else {
+      alert('No space to swap out existing buff; action canceled.');
+      // rollback
+      if (drag.source === 'inventory'){
+        // put dragged item back to previous inventory position
+        placeInInventory(game.save.inventory, item, xyFromIndex(drag.index).x, xyFromIndex(drag.index).y);
+      } else if (drag.source === 'buff-equip'){
+        game.save.buffsEquipped[drag.index] = item;
+      } else if (drag.source === 'equipment'){
+        game.save.equipment[drag.index] = item;
+      }
+      return;
+    }
+  }
+  pushLog(`Equipped buff ${item.name} to buff slot ${slotIndex+1}.`);
+  game.dragging = null;
+  renderAll();
+  saveGame();
+}
+
+/* ==========================
+   Tooltip system per spec
+   - Interactive, colored by rarity hex
+   - Hover on desktop, tap/long-press on mobile
+   - Tooltip contains: Name, Rarity (color + label), Coin/s, Float, Sell value, Equip/Unequip/Sell buttons
+   - Tooltip should stay open while pointer is over it
+   - Keyboard accessible: focused items show tooltip
+   ========================== */
+const tooltipEl = document.getElementById('tooltip');
+let tooltipTimeout = null;
+let tooltipPersistent = false;
+
+function showTooltipForItem(item, ctx){
+  // ctx: {source: 'inventory'|'equipment'|'buff-equip', index, element}
+  tooltipPersistent = false;
+  renderTooltip(item, ctx);
+  positionTooltipNearElement(ctx.element);
+  tooltipEl.classList.remove('hidden');
+  tooltipEl.setAttribute('aria-hidden','false');
+  game.tooltipTarget = ctx;
+}
+function renderTooltip(item, ctx){
+  tooltipEl.innerHTML = '';
+  // rarity band
+  const band = document.createElement('div');
+  band.className = 'rarity-band';
+  band.style.background = RARITY_MAP[item.rarity].color;
+  tooltipEl.appendChild(band);
+  // name & rarity
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `<div style="display:flex;flex-direction:column"><div class="name">${item.name}</div><div class="meta">${item.description}</div></div><div style="text-align:right">
+  <div
+    class="rarity-tag ${rarityTagClass(item.rarity)}"
+    style="
+      color:${RARITY_MAP[item.rarity].color};
+      font-size:12px;
+      padding:3px 10px;
+    "
+  >
+    ${item.rarity}
+  </div>
+</div>`;
+
+  tooltipEl.appendChild(row);
+  // stats
+  const stats = document.createElement('div');
+  stats.style.marginTop = '8px';
+  stats.innerHTML = `<div class="sub">Value: <strong>${formatCompact((item.buyPrice || 0).toFixed(1))}</strong></div>
+                    <div class="sub">Coin/s: <strong>${formatCompact((item.coinPerSec || 0).toFixed(1))}</strong></div>
+                     <div class="sub">Float: <strong>${item.float?.toFixed(2) || '0.00'}</strong> (0–10)</div>
+                     <div class="sub">Sell value: <strong>${formatCompact(item.sellPrice || 0)}</strong></div>`;
+  tooltipEl.appendChild(stats);
+  // actions
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  // Decide which buttons: Equip (if not equipped & small type), Unequip (if equipped), Sell always
+  const equipBtn = document.createElement('button'); equipBtn.className = 'btn primary'; equipBtn.innerText = 'Equip';
+  const unequipBtn = document.createElement('button'); unequipBtn.className = 'btn'; unequipBtn.innerText = 'Unequip';
+  const sellBtn = document.createElement('button'); sellBtn.className = 'btn warn'; sellBtn.innerText = 'Sell';
+  // Bind actions based on context
+  // If item is in inventory, allow Equip (if 1x1) or Place buff? For simplicity Equip will attempt place into first free equip/buff slot automatically
+  equipBtn.onclick = ()=>{
+    if (item.inventorySize.w === 1 && item.inventorySize.h === 1){
+      // equip to first free equipment slot; if none, ask to swap with slot 0
+      let slot = game.save.equipment.findIndex(s=>s===null);
+      if (slot === -1) slot = 0;
+      // remove from inventory (we must find the item within inventory grid)
+      const idx = findItemIndexInInventory(item);
+      if (idx===-1){ alert('Item not found in inventory'); return; }
+      removeFromInventory(game.save.inventory, idx);
+      // equip and handle swapping
+      const occupying = game.save.equipment[slot];
+      game.save.equipment[slot] = item;
+      if (occupying){
+        const spot = findFirstFit(game.save.inventory, occupying);
+        if (spot) placeInInventory(game.save.inventory, occupying, spot.x, spot.y);
+        else {
+          // if no room, revert
+          alert('No space to swap out existing equipment. Equip canceled.');
+          placeInInventory(game.save.inventory, item, xyFromIndex(idx).x, xyFromIndex(idx).y);
+          return;
+        }
+      }
+      pushLog(`Equipped ${item.name} via tooltip to slot ${slot+1}.`);
+      renderAll();
+      saveGame();
+      hideTooltip();
+    } else {
+      // buff: equip to first free buff slot
+      if (item.inventorySize.w===2){
+        let bslot = game.save.buffsEquipped.findIndex(s=>s===null);
+        if (bslot===-1) bslot = 0;
+        const idx = findItemIndexInInventory(item);
+        if (idx===-1){ alert('Item not found in inventory'); return; }
+        removeFromInventory(game.save.inventory, idx);
+        const occupying = game.save.buffsEquipped[bslot];
+        game.save.buffsEquipped[bslot] = item;
+        if (occupying){
+          const spot = findFirstFit(game.save.inventory, occupying);
+          if (spot) placeInInventory(game.save.inventory, occupying, spot.x, spot.y);
+          else {
+            alert('No space to swap out existing buff. Equip canceled.');
+            placeInInventory(game.save.inventory, item, xyFromIndex(idx).x, xyFromIndex(idx).y);
+            return;
+          }
+        }
+        pushLog(`Equipped buff ${item.name} via tooltip to buff slot ${bslot+1}.`);
+        renderAll();
+        saveGame();
+        hideTooltip();
+      }
+    }
+  };
+  unequipBtn.onclick = ()=>{
+    // find whether item is equipped; if so move to inventory if space
+    let found = false;
+    for(let i=0;i<6;i++){
+      if (game.save.equipment[i] && game.save.equipment[i].id === item.id){
+        const spot = findFirstFit(game.save.inventory, item);
+        if (!spot){ alert('No space to unequip.'); return; }
+        game.save.equipment[i] = null;
+        placeInInventory(game.save.inventory, item, spot.x, spot.y);
+        pushLog(`Unequipped ${item.name} via tooltip.`);
+        found = true; break;
+      }
+    }
+    if (!found){
+      for(let i=0;i<3;i++){
+        if (game.save.buffsEquipped[i] && game.save.buffsEquipped[i].id === item.id){
+          const spot = findFirstFit(game.save.inventory, item);
+          if (!spot){ alert('No space to unequip.'); return; }
+          game.save.buffsEquipped[i] = null;
+          placeInInventory(game.save.inventory, item, spot.x, spot.y);
+          pushLog(`Unequipped buff ${item.name} via tooltip.`);
+          found = true; break;
+        }
+      }
+    }
+    if (!found){ alert('Item is not currently equipped.'); }
+    renderAll(); saveGame(); hideTooltip();
+  };
+  sellBtn.onclick = ()=>{
+    if (!confirm(`Sell ${item.name} for ${formatCompact(item.sellPrice)} coins?`)) return;
+    // if equipped, remove; if in inventory remove; add coins
+    let removed = false;
+    for(let i=0;i<6;i++){
+      if (game.save.equipment[i] && game.save.equipment[i].id === item.id){ game.save.equipment[i] = null; removed=true; break; }
+    }
+    if (!removed){
+      for(let i=0;i<3;i++){
+        if (game.save.buffsEquipped[i] && game.save.buffsEquipped[i].id === item.id){ game.save.buffsEquipped[i] = null; removed=true; break; }
+      }
+    }
+    if (!removed){
+      const idx = findItemIndexInInventory(item);
+      if (idx !== -1) { removeFromInventory(game.save.inventory, idx); removed=true; }
+    }
+    if (!removed) { alert('Item not found.'); return; }
+    game.save.coins += item.sellPrice;
+    pushLog(`Sold ${item.name} for ${formatCompact(item.sellPrice)} coins.`);
+    renderAll(); saveGame(); hideTooltip();
+  };
+  // show appropriate buttons
+  const inEquip = game.save.equipment.some(e=> e && e.id===item.id);
+  const inBuffEquip = game.save.buffsEquipped.some(b => b && b.id===item.id);
+  if (inEquip || inBuffEquip) {
+    actions.appendChild(unequipBtn);
+  } else {
+    actions.appendChild(equipBtn);
+  }
+  actions.appendChild(sellBtn);
+  tooltipEl.appendChild(actions);
+  // keep tooltip interactive: mouseenter keeps it alive; mouseleave hides unless persistent
+  tooltipEl.onmouseenter = ()=> { tooltipPersistent = true; tooltipEl.focus(); };
+  tooltipEl.onmouseleave = ()=> { tooltipPersistent = false; hideTooltipAfterDelay(); };
+  // keyboard accessibility for buttons
+  tooltipEl.tabIndex = 0;
+}
+
+/* position tooltip near element; ensure it doesn't go off-screen */
+function positionTooltipNearElement(el){
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const tt = tooltipEl;
+  // Preferred placement: to the right of element; if near edge, place above
+  const spaceRight = window.innerWidth - rect.right;
+  const spaceLeft = rect.left;
+  const spaceAbove = rect.top;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  // default: right
+  let left = rect.right + 10;
+  let top = rect.top;
+  if (spaceRight < 280 && spaceLeft > 280){ left = rect.left - 10 - 320; }
+  // vertical adjust:
+  if (top + 200 > window.innerHeight && spaceAbove > 200) top = rect.bottom - 200;
+  tt.style.left = `${left}px`;
+  tt.style.top = `${top}px`;
+}
+
+/* Hide tooltip after small delay unless persistent */
+function hideTooltipAfterDelay(){
+  setTimeout(()=> {
+    if (!tooltipPersistent){ hideTooltip(); }
+  }, 250);
+}
+function hideTooltip(){
+  tooltipEl.classList.add('hidden');
+  tooltipEl.setAttribute('aria-hidden','true');
+  game.tooltipTarget = null;
+}
+
+/* Add touch support: long-press to show tooltip; short-drag to start dragging */
+function addTouchDragAndTooltip(node, item, index, source){
+  let touchTimer = null;
+  let touchMoved = false;
+  node.addEventListener('touchstart', (e)=>{
+    touchMoved = false;
+    touchTimer = setTimeout(()=> {
+      // show tooltip
+      showTooltipForItem(item, {source, index, element:node});
+    }, 500);
+  }, {passive:true});
+  node.addEventListener('touchmove', (e)=>{
+    touchMoved = true;
+    if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+  }, {passive:true});
+  node.addEventListener('touchend', (e)=>{
+    if (touchTimer){ clearTimeout(touchTimer); touchTimer=null; }
+    if (!touchMoved){
+      // treat as tap: open tooltip (toggle)
+      showTooltipForItem(item, {source, index, element:node});
+    }
+  });
+}
+
+/* Keyboard actions on focused item */
+function keyboardItemAction(e, item, index, source){
+  if (e.key === 'Enter' || e.key === ' '){
+    e.preventDefault();
+    // open tooltip
+    const el = document.activeElement;
+    showTooltipForItem(item, {source,index,element:el});
+  } else if (e.key === 'e' || e.key === 'E'){
+    // equip/unequip
+    // For simplicity, call tooltip equip action
+    showTooltipForItem(item, {source,index,element:document.activeElement});
+    // focus primary action
+  }
+}
+
+/* Utility: find item index in inventory grid by id */
+function findItemIndexInInventory(item){
+  return game.save.inventory.findIndex(c => c && !c.span && c.id === item.id);
+}
+
+/* ==========================
+   Merge implementation
+   ========================== */
+function addToMergeSlotFromInventory(indexFromInventory, mergeSlotIdx){
+  const item = game.save.inventory[indexFromInventory];
+  if (!item || item.span) return false;
+  if (game.mergeSlots[mergeSlotIdx]) { alert('Merge slot occupied.'); return false; }
+  // remove from inventory
+  removeFromInventory(game.save.inventory, indexFromInventory);
+  game.mergeSlots[mergeSlotIdx] = item;
+  renderMergePanel();
+  renderInventory();
+  saveGame();
+  return true;
+}
+function getMergeAveragePrice(){
+  const set = game.mergeSlots.filter(Boolean);
+  if (set.length < 3) return 0;
+  const sum = set.reduce((s,it)=>s + (it.buyPrice || it.buyPrice),0);
+  return Math.round(sum / set.length);
+}
+function buyMergeEnhancement(){
+  const avg = getMergeAveragePrice();
+  if (avg === 0){ alert('Place 3 items to see enhancement cost.'); return; }
+  const cost = Math.round(avg * 1.5);
+  if (game.save.coins < cost){ alert('Not enough coins for enhancement.'); return; }
+  // cap enhancement so higher outcome could reach 100%
+  if (game.mergeEnhPct >= 100){ alert('Already at max enhancement.'); return; }
+  game.save.coins -= cost;
+  game.mergeEnhPct = Math.min(100, game.mergeEnhPct + 10);
+  pushLog(`Bought merge enhancement +10% for ${formatCompact(cost)} coins.`);
+  renderMergePanel(); updateDisplays(); saveGame();
+}
+function clearMergeSlots(){
+  // place items back into inventory
+  for(let i=0;i<3;i++){
+    const it = game.mergeSlots[i];
+    if (it){
+      const spot = findFirstFit(game.save.inventory, it);
+      if (spot) placeInInventory(game.save.inventory, it, spot.x, spot.y);
+      else {
+        // if no space, create log and drop item (for simplicity, we'll drop and add coins instead)
+        game.save.coins += it.sellPrice;
+        pushLog(`No inventory space to return ${it.name}; auto-sold for ${it.sellPrice} coins.`);
+      }
+      game.mergeSlots[i] = null;
+    }
+  }
+  game.mergeEnhPct = 0;
+  renderMergePanel(); renderInventory(); saveGame();
+}
+function performMerge(){
+  const set = game.mergeSlots.filter(Boolean);
+  if (set.length !== 3){ alert('Place exactly 3 items to merge.'); return; }
+  // compute average price
+  const avg = getMergeAveragePrice();
+  // compute odds with enhancement
+  const base = [60,30,10]; // mid(avg), low, high
+  const enhanced = clamp(game.mergeEnhPct,0,100);
+  const highPct = clamp(base[2] + enhanced, 0, 100);
+  const remaining = 100 - highPct;
+  const lowPct = Math.round(remaining * (base[1]/(base[0]+base[1])));
+  const midPct = remaining - lowPct;
+  // Roll deterministic
+  const roll = rng()*100;
+  let outcome = 'avg';
+  if (roll < midPct) outcome = 'avg';
+  else if (roll < midPct + lowPct) outcome = 'low';
+  else outcome = 'high';
+  // Determine resulting price modifier: low ~ -30%, high ~ +30% of avg (configurable)
+  let resultPrice;
+  if (outcome === 'avg') resultPrice = Math.round(avg);
+  else if (outcome === 'low') resultPrice = Math.max(1, Math.round(avg * (0.7 + rng()*0.1))); // 70%..80%
+  else resultPrice = Math.round(avg * (1.1 + rng()*0.4)); // 110%..150%
+  // Determine rarity of result by price: map price to nearest rarity by basePrice thresholds
+  let targetRarity = RARITIES[0].id;
+  for(let i=RARITIES.length-1;i>=0;i--){
+    if (resultPrice >= RARITIES[i].basePrice) { targetRarity = RARITIES[i].id; break; }
+  }
+  // Create merged item deterministically (new float)
+  const merged = createItemFromRarity(targetRarity);
+  merged.buyPrice = resultPrice;
+  merged.sellPrice = Math.floor(resultPrice * 0.5);
+  merged.createdFromMerge = true;
+  // try place into inventory, else award coins
+  const spot = findFirstFit(game.save.inventory, merged);
+  if (spot) placeInInventory(game.save.inventory, merged, spot.x, spot.y);
+  else { game.save.coins += merged.sellPrice; pushLog(`No inventory space; merged item auto-sold for ${merged.sellPrice}.`); }
+  // award gems based on rarity per rules (Common 1, Uncommon 3, Rare 5, Epic 10, Legendary 30, Mythic 50)
+  const gemTable = {'Common':1,'Uncommon':3,'Rare':5,'Epic':10,'Legendary':30,'Mythic':50};
+  const gemsAward = gemTable[targetRarity] || 0;
+  if (gemsAward>0) {
+    game.save.gems += gemsAward;
+    pushLog(`Merge result: ${merged.name} (${targetRarity}) — awarded ${gemsAward} gems.`);
+  } else {
+    pushLog(`Merge result: ${merged.name} (${targetRarity}).`);
+  }
+  // Clear merge slots and store result
+  game.mergeSlots = [null,null,null];
+  game.mergeEnhPct = 0;
+  game.lastMergeResult = {merged, outcome, roll, seed: game.save.rngSeed};
+  pushLog(`Merge roll: ${outcome} (roll ${roll.toFixed(2)}).`);
+  renderAll(); saveGame();
+}
+
+/* ==========================
+   Prestige system
+   ========================== */
+function getPrestigeRequirement(){
+  // e.g., base 1,000,000 * (1.5 ^ prestigeCount)
+  const baseReq = 100000;
+  return Math.round(baseReq * Math.pow(1.5, game.save.prestigeCount));
+}
+function doPrestige(){
+  const req = getPrestigeRequirement();
+  if (game.save.coins < req) {
+    alert(`Need ${formatCompact(req)} coins to prestige.`);
+    return;
+  }
+  if (!confirm(`Prestiging will reset inventory and equipment, but grant permanent +25% base income. Proceed?`)) return;
+  // grant prestige bonus
+  game.save.prestigeCount += 1;
+  game.save.prestigeBonusPct += 25;
+  // reset ephemeral state
+  game.save.coins = 500;
+  game.save.gems = 0;
+  game.save.inventory = createEmptyInventoryGrid();
+  game.save.equipment = [null,null,null,null,null,null];
+  game.save.buffsEquipped = [null,null,null];
+  game.save.shopSeed = Math.floor(rng()*1e9);
+  game.save.shopContents = generateShop(game.save.shopSeed);
+  game.save.lastTimestamp = nowTs();
+  pushLog(`Prestiged! Now prestige count ${game.save.prestigeCount}, +${game.save.prestigeBonusPct}% base income.`);
+  renderAll(); saveGame();
+}
+
+/* ==========================
+   Utility UI handlers & wiring
+   ========================== */
+document.getElementById('btnSettings').addEventListener('click', ()=> {
+  document.getElementById('modalSettings').style.display = 'flex';
+});
+document.getElementById('btnCloseSettings').addEventListener('click', ()=> {
+  document.getElementById('modalSettings').style.display = 'none';
+});
+document.getElementById('btnTutorial').addEventListener('click', ()=> {
+  document.getElementById('modalTutorial').style.display = 'flex';
+});
+document.getElementById('btnCloseTutorial').addEventListener('click', ()=> {
+  document.getElementById('modalTutorial').style.display = 'none';
+});
+document.getElementById('btnRefreshShop').addEventListener('click', manualRefreshShop);
+document.getElementById('btnPrestige').addEventListener('click', doPrestige);
+document.getElementById('btnEnhance').addEventListener('click', buyMergeEnhancement);
+document.getElementById('btnMerge').addEventListener('click', performMerge);
+document.getElementById('btnClearMerge').addEventListener('click', clearMergeSlots);
+document.getElementById('btnClearLog').addEventListener('click', ()=> { game.save.logs = []; renderLogs(); saveGame(); });
+document.getElementById('btnExport').addEventListener('click', ()=> { document.getElementById('saveBox').value = JSON.stringify(game.save); alert('Save JSON copied to box below. You may Export.'); });
+document.getElementById('btnImport').addEventListener('click', ()=> { const v = prompt('Paste save JSON'); if (!v) return; try{ const parsed=JSON.parse(v); game.save = parsed; initRng(game.save.rngSeed || DEFAULT_SEED); saveGame(); renderAll(); alert('Imported save.'); }catch(e){ alert('Invalid JSON'); }});
+document.getElementById('btnExportSave').addEventListener('click', ()=> { document.getElementById('saveBox').value = JSON.stringify(game.save); });
+document.getElementById('btnImportSave').addEventListener('click', ()=> {
+  const v = document.getElementById('saveBox').value;
+  if (!v) return; try{ const parsed=JSON.parse(v); game.save=parsed; initRng(game.save.rngSeed||DEFAULT_SEED); saveGame(); renderAll(); alert('Imported save.'); }catch(e){ alert('Invalid JSON'); }
+});
+document.getElementById('btnSave').addEventListener('click', ()=> { saveGame(); alert('Saved.'); });
+document.getElementById('btnLoad').addEventListener('click', ()=> { initGame(); alert('Loaded.'); });
+document.getElementById('btnReset').addEventListener('click', ()=> { if (!confirm('Reset all progress?')) return; localStorage.removeItem(SAVE_KEY); location.reload(); });
+
+document.getElementById('btnGenSeed').addEventListener('click', ()=> {
+  const s = Math.floor(Math.random()*0xFFFFFFFF);
+  document.getElementById('seedInput').value = s;
+});
+document.getElementById('btnSetSeed').addEventListener('click', ()=> {
+  const v = Number(document.getElementById('seedInput').value) >>> 0;
+  if (!v) { alert('Enter a valid numeric seed'); return; }
+  game.save.rngSeed = v;
+  initRng(game.save.rngSeed);
+  saveGame(); alert('Seed set & RNG re-seeded. Note: previous randomness cannot be replayed from same save unless seed matches originally used.');
+});
+document.getElementById('btnShowSeed').addEventListener('click', ()=> {
+  game.save.settings.showSeed = !game.save.settings.showSeed;
+  applySettingsToUI();
+  saveGame();
+});
+
+document.getElementById('offlineMax').addEventListener('change', (e)=> {
+  const v = Number(e.target.value); game.save.settings.offlineMaxHours = clamp(v,0,24); saveGame();
+});
+document.getElementById('fontSize').addEventListener('input', (e)=> {
+  const v = Number(e.target.value); document.documentElement.style.fontSize = `${v}px`; game.save.settings.fontSize = v; saveGame();
+});
+
+/* Purchase gems by exchanging coins */
+function exchangeCoinsForGems(){
+  const cost = 50000;
+  if (game.save.coins < cost) { alert('Not enough coins to convert.'); return; }
+  const n = Math.floor(game.save.coins / cost);
+  if (n<=0){ alert('No full 50,000 chunks.'); return; }
+  const confirmQty = Math.min(n, 1000);
+  if (!confirm(`Convert ${formatCompact(confirmQty*cost)} coins into ${confirmQty} gems?`)) return;
+  game.save.coins -= confirmQty * cost;
+  game.save.gems += confirmQty;
+  pushLog(`Converted ${formatCompact(confirmQty*cost)} coins into ${confirmQty} gems.`);
+  updateDisplays(); saveGame();
+}
+
+/* Tooltip keyboard close / global handler */
+document.addEventListener('click', (e)=>{
+  // if click outside tooltip & not persistent, hide
+  if (!tooltipEl.contains(e.target) && game.tooltipTarget && e.target !== game.tooltipTarget.element){
+    hideTooltip();
+  }
+});
+window.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') hideTooltip();
+});
+
+/* Apply settings to UI */
+function applySettingsToUI(){
+  document.getElementById('seedInput').value = game.save.rngSeed || DEFAULT_SEED;
+  document.getElementById('seedLabel').innerText = (game.save.settings.showSeed ? (game.save.rngSeed||'') : 'Hidden');
+  document.getElementById('offlineMax').value = game.save.settings.offlineMaxHours || 24;
+  document.getElementById('fontSize').value = game.save.settings.fontSize || 14;
+  document.documentElement.style.fontSize = `${game.save.settings.fontSize || 14}px`;
+}
+
+/* ==========================
+   Initial render & boot
+   ========================== */
+/* Initialize inventory grid DOM and attach interactive behavior for adding from shop via drag/drop */
+function wireInventoryClicks(){
+  const invGrid = document.getElementById('inventoryGrid');
+  invGrid.addEventListener('drop', (e)=> e.preventDefault());
+}
+wireInventoryClicks();
+initGame();
+
+/* Expose some functions to console for debugging (optional) */
+window._game = game;
+window._save = () => JSON.parse(JSON.stringify(game.save));
+window.exchangeCoinsForGems = exchangeCoinsForGems;
+
+/* ======================================================================
+   Notes & Determinism:
+   - All calls that need randomness call rng(), which uses mulberry32 seeded
+     with game.save.rngSeed. For full reproducibility, export the save
+     (includes rngSeed and shopSeed) and re-import to replay same RNG sequence.
+   - Important random uses: item float (createItemFromRarity), name parts,
+     shop generation, merge roll, buff generation.
+   - To reproduce a session exactly: start from same save with same rngSeed
+     and perform same actions in the same order. The code intentionally
+     doesn't mutate the seed in save after each rng call — instead the
+     RNG function advances internal state. If you export state mid-session,
+     the internal RNG position is not stored; to fully reproduce, you'd
+     need to replay actions from saved starting seed.
+   ====================================================================== */
+
+</script>
+</body>
+</html>
