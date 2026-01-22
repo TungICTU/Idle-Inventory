@@ -1639,6 +1639,60 @@ function getNextEnhanceCost() {
   return Math.max(1, Math.round(avg / ENHANCE_DIVISORS[step]));
 }
 
+// --- Helper: apply enhancement to base odds ---
+// baseOdds: array of numbers (sum = ~100). enhanced: total extra to add to 'high' (in percent).
+function applyEnhToOdds(baseOdds, enhanced){
+  const odds = baseOdds.slice();
+  const n = odds.length;
+  if (n === 0 || enhanced <= 0) return odds;
+
+  // find highest index (prefer rightmost high like original logic: high is index 2 mostly)
+  let highIndex = 0;
+  for(let i=1;i<odds.length;i++){
+    if ((odds[i] || 0) > (odds[highIndex] || 0)) highIndex = i;
+  }
+
+  // indices of other slots
+  let otherIdx = [];
+  for(let i=0;i<odds.length;i++) if (i !== highIndex) otherIdx.push(i);
+
+  // total available to remove from others
+  let totalAvailable = otherIdx.reduce((s,idx)=> s + Math.max(0, odds[idx]||0), 0);
+  // amount we can actually apply (can't remove more than exists)
+  let toApply = Math.min(enhanced, totalAvailable);
+
+  // Distribute removal across others, iteratively handling clamping to zero
+  let remainingToRemove = toApply;
+  let active = otherIdx.slice();
+  while(remainingToRemove > 1e-9 && active.length > 0){
+    let per = remainingToRemove / active.length;
+    let removedThisPass = 0;
+    const nextActive = [];
+    for(const idx of active){
+      const avail = odds[idx];
+      const deduct = Math.min(avail, per);
+      odds[idx] = +(odds[idx] - deduct);
+      removedThisPass += deduct;
+      if (odds[idx] > 1e-9) nextActive.push(idx);
+    }
+    if (removedThisPass <= 1e-9) break; // nothing removed — safety
+    remainingToRemove -= removedThisPass;
+    active = nextActive;
+  }
+
+  // Add applied amount to the high slot
+  const applied = toApply - remainingToRemove; // amount successfully removed from others (should equal toApply)
+  odds[highIndex] = +( (odds[highIndex] || 0) + applied );
+
+  // Minor numeric corrections to ensure sum ~100 (avoid tiny rounding errors)
+  const sum = odds.reduce((s,x)=>s + (x||0), 0);
+  if (Math.abs(sum - 100) > 0.0001 && sum > 0){
+    const scale = 100 / sum;
+    for(let i=0;i<odds.length;i++) odds[i] = +(odds[i] * scale);
+  }
+  return odds;
+}
+
 function parseNameParts(name){
   if (!name) return {};
   const ofIdx = name.indexOf(' of ');
@@ -1901,7 +1955,8 @@ function renderMergePanel(){
       const label = document.createElement('div');
       label.style.fontSize = '11px';
       label.style.color = 'var(--muted)';
-      label.innerText = `${previewData.label || ''} — ${(previewData.chance||0).toFixed(2)}%`;
+      label.innerText = `${previewData.label || ''} — ${(adjustedOdds[pos]||0).toFixed(2)}%`;
+
       pv.appendChild(card);
       pv.appendChild(label);
     } else {
@@ -1910,10 +1965,15 @@ function renderMergePanel(){
     previewWrap.appendChild(pv);
   }
 
-  // update odds text and enhance cost / pct
-  const oddsEl = document.getElementById('mergeOdds'); if (oddsEl) oddsEl.innerText = computeOddsText(previews);
-  const costEl = document.getElementById('mergeCost'); if (costEl) costEl.innerText = `Enhance cost: ${formatCompact(getNextEnhanceCost())}`;
-  const pctEl = document.getElementById('mergeEnhPct'); if (pctEl) pctEl.innerText = `${game.mergeEnhPct}%`;
+// compute adjusted preview chances (so UI shows actual enhanced odds)
+const baseOdds = previews.map(p => p ? (p.chance || 0) : 0);
+const adjustedOdds = applyEnhToOdds(baseOdds, game.mergeEnhPct || 0);
+const adjustedPreviews = previews.map((p,i) => p ? Object.assign({}, p, { chance: adjustedOdds[i] }) : null);
+
+// use adjustedPreviews for display & odds text
+const oddsEl = document.getElementById('mergeOdds'); if (oddsEl) oddsEl.innerText = computeOddsText(adjustedPreviews);
+const costEl = document.getElementById('mergeCost'); if (costEl) costEl.innerText = `Enhance cost: ${formatCompact(getNextEnhanceCost())}`;
+const pctEl = document.getElementById('mergeEnhPct'); if (pctEl) pctEl.innerText = `${game.mergeEnhPct}%`;
 
   // update merge button text (shows merge cost + pending enhance)
   const mergeBtn = document.getElementById('btnMerge');
@@ -1977,19 +2037,19 @@ function performMerge(){
     previews = computeMergePreviews();
   }
 
-  const odds = previews.map(p => p ? p.chance : 0);
-  const enhanced = game.mergeEnhPct || 0;
-  let highIndex = 2;
-  if (!previews[2] && previews[1] && previews[0]) highIndex = 1;
-  odds[highIndex] = (odds[highIndex] || 0) + enhanced;
-  const totalAfterAdd = odds.reduce((s,x)=>s+(x||0),0);
-  if (totalAfterAdd > 0){
-    for(let i=0;i<odds.length;i++) odds[i] = (odds[i] || 0) * (100 / totalAfterAdd);
-  }
+// build base odds from previews (use stored previews if available)
+const baseOdds = previews.map(p => p ? (p.chance || 0) : 0);
+// compute adjusted odds using the enhancement algorithm
+const odds = applyEnhToOdds(baseOdds, game.mergeEnhPct || 0);
 
-  const roll = rng()*100;
-  let cumulative = 0; let chosenIdx = 1;
-  for(let i=0;i<odds.length;i++){ cumulative += odds[i] || 0; if (roll <= cumulative) { chosenIdx = i; break; } }
+// do the roll (0..100) and pick the result by cumulative odds
+const roll = rng() * 100;
+let cumulative = 0; let chosenIdx = 1;
+for(let i=0;i<odds.length;i++){
+  cumulative += odds[i] || 0;
+  if (roll <= cumulative) { chosenIdx = i; break; }
+}
+
 
   const chosenPreview = previews[chosenIdx] || previews[1];
   if (!chosenPreview){ alert('Merge failed (internal).'); return; }
@@ -2604,89 +2664,6 @@ function getMergeAveragePrice(){
   if (set.length < 3) return 0;
   const sum = set.reduce((s,it)=>s + (it.buyPrice || it.buyPrice),0);
   return Math.round(sum / set.length);
-}
-function buyMergeEnhancement(){
-  const avg = getMergeAveragePrice();
-  if (avg === 0){ alert('Place 3 items to see enhancement cost.'); return; }
-  const cost = Math.round(avg * 1.5);
-  if (game.save.coins < cost){ alert('Not enough coins for enhancement.'); return; }
-  // cap enhancement so higher outcome could reach 100%
-  if (game.mergeEnhPct >= 100){ alert('Already at max enhancement.'); return; }
-  game.save.coins -= cost;
-  game.mergeEnhPct = Math.min(100, game.mergeEnhPct + 10);
-  pushLog(`Bought merge enhancement +10% for ${formatCompact(cost)} coins.`);
-  renderMergePanel(); updateDisplays(); saveGame();
-}
-function clearMergeSlots(){
-  // place items back into inventory
-  for(let i=0;i<3;i++){
-    const it = game.mergeSlots[i];
-    if (it){
-      const spot = findFirstFit(game.save.inventory, it);
-      if (spot) placeInInventory(game.save.inventory, it, spot.x, spot.y);
-      else {
-        // if no space, create log and drop item (for simplicity, we'll drop and add coins instead)
-        game.save.coins += it.sellPrice;
-        pushLog(`No inventory space to return ${it.name}; auto-sold for ${it.sellPrice} coins.`);
-      }
-      game.mergeSlots[i] = null;
-    }
-  }
-  game.mergeEnhPct = 0;
-  renderMergePanel(); renderInventory(); saveGame();
-}
-function performMerge(){
-  const set = game.mergeSlots.filter(Boolean);
-  if (set.length !== 3){ alert('Place exactly 3 items to merge.'); return; }
-  // compute average price
-  const avg = getMergeAveragePrice();
-  // compute odds with enhancement
-  const base = [60,30,10]; // mid(avg), low, high
-  const enhanced = clamp(game.mergeEnhPct,0,100);
-  const highPct = clamp(base[2] + enhanced, 0, 100);
-  const remaining = 100 - highPct;
-  const lowPct = Math.round(remaining * (base[1]/(base[0]+base[1])));
-  const midPct = remaining - lowPct;
-  // Roll deterministic
-  const roll = rng()*100;
-  let outcome = 'avg';
-  if (roll < midPct) outcome = 'avg';
-  else if (roll < midPct + lowPct) outcome = 'low';
-  else outcome = 'high';
-  // Determine resulting price modifier: low ~ -30%, high ~ +30% of avg (configurable)
-  let resultPrice;
-  if (outcome === 'avg') resultPrice = Math.round(avg);
-  else if (outcome === 'low') resultPrice = Math.max(1, Math.round(avg * (0.7 + rng()*0.1))); // 70%..80%
-  else resultPrice = Math.round(avg * (1.1 + rng()*0.4)); // 110%..150%
-  // Determine rarity of result by price: map price to nearest rarity by basePrice thresholds
-  let targetRarity = RARITIES[0].id;
-  for(let i=RARITIES.length-1;i>=0;i--){
-    if (resultPrice >= RARITIES[i].basePrice) { targetRarity = RARITIES[i].id; break; }
-  }
-  // Create merged item deterministically (new float)
-  const merged = createItemFromRarity(targetRarity);
-  merged.buyPrice = resultPrice;
-  merged.sellPrice = Math.floor(resultPrice * 0.5);
-  merged.createdFromMerge = true;
-  // try place into inventory, else award coins
-  const spot = findFirstFit(game.save.inventory, merged);
-  if (spot) placeInInventory(game.save.inventory, merged, spot.x, spot.y);
-  else { game.save.coins += merged.sellPrice; pushLog(`No inventory space; merged item auto-sold for ${merged.sellPrice}.`); }
-  // award gems based on rarity per rules (Common 1, Uncommon 3, Rare 5, Epic 10, Legendary 30, Mythic 50)
-  const gemTable = {'Common':1,'Uncommon':3,'Rare':5,'Epic':10,'Legendary':30,'Mythic':50};
-  const gemsAward = gemTable[targetRarity] || 0;
-  if (gemsAward>0) {
-    game.save.gems += gemsAward;
-    pushLog(`Merge result: ${merged.name} (${targetRarity}) — awarded ${gemsAward} gems.`);
-  } else {
-    pushLog(`Merge result: ${merged.name} (${targetRarity}).`);
-  }
-  // Clear merge slots and store result
-  game.mergeSlots = [null,null,null];
-  game.mergeEnhPct = 0;
-  game.lastMergeResult = {merged, outcome, roll, seed: game.save.rngSeed};
-  pushLog(`Merge roll: ${outcome} (roll ${roll.toFixed(2)}).`);
-  renderAll(); saveGame();
 }
 
 /* ==========================
